@@ -1,0 +1,119 @@
+{
+  "trig_protocol_1": {
+    "protocol_id": "trig_protocol_1",
+    "name": "Simulation Practice Settings",
+    "version": "1.0",
+    "format_type": "JSON",
+    "delimiter": null,
+    "fields": [
+      {
+        "name": "age",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "Pediatric=0, Adult=1, Geriatric=2"
+      },
+      {
+        "name": "difficulty",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "Easy=0, Medium=1, Hard=2"
+      },
+      {
+        "name": "case_type",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "Basic=0, Emer/Trauma=1"
+      },
+      {
+        "name": "practice_mode",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "Tutorial=0, Guide=1, Blind=2"
+      }
+    ]
+  },
+  "trig_protocol_2": {
+    "protocol_id": "trig_protocol_2",
+    "name": "Haptic Device Telemetry",
+    "version": "1.0",
+    "format_type": "Delimited",
+    "delimiter": ";",
+    "fields": [
+      {
+        "name": "p",
+        "data_type": "float",
+        "byte_length": null,
+        "description": "pitch angle"
+      },
+      {
+        "name": "y",
+        "data_type": "float",
+        "byte_length": null,
+        "description": "yaw angle"
+      },
+      {
+        "name": "z",
+        "data_type": "float",
+        "byte_length": null,
+        "description": "insertion depth"
+      },
+      {
+        "name": "zdot",
+        "data_type": "float",
+        "byte_length": null,
+        "description": "insertion speed"
+      },
+      {
+        "name": "touch",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "needle holding state"
+      },
+      {
+        "name": "bp",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "brake state (pitch)"
+      },
+      {
+        "name": "by",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "brake state (yaw)"
+      }
+    ]
+  },
+  "trig_protocol_3": {
+    "protocol_id": "trig_protocol_3",
+    "name": "Haptic Control Command",
+    "version": "1.0",
+    "format_type": "Delimited",
+    "delimiter": ";",
+    "fields": [
+      {
+        "name": "Ki",
+        "data_type": "float",
+        "byte_length": null,
+        "description": "Current Constant Value"
+      },
+      {
+        "name": "Kv",
+        "data_type": "float",
+        "byte_length": null,
+        "description": "Voltage Constant Value"
+      },
+      {
+        "name": "bp",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "brake state (pitch)"
+      },
+      {
+        "name": "by",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "brake state (yaw)"
+      }
+    ]
+  }
+}
