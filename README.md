@@ -27,7 +27,9 @@ protocol-api/
 1. ติดตั้ง Dependencies และเปิดใช้งาน FastAPI Server
 ```
 # ติดตั้งแพ็กเกจที่จำเป็น
+```
 pip install fastapi uvicorn requests setuptools
+```
 
 # เริ่มรันเซิร์ฟเวอร์
 uvicorn main:app --reload
@@ -54,7 +56,7 @@ pip install -e protocol_sdk
 ```
 ติดตั้งจาก GitHub Repository (สำหรับทีมงานท่านอื่น):
 ```Code:
-pip install git+[https://github.com/your-username/protocol-api.git#subdirectory=protocol_sdk](https://github.com/your-username/protocol-api.git#subdirectory=protocol_sdk)
+pip install git+[https://github.com/Rain-Code-SYS/protocol-api.git#subdirectory=protocol_sdk](https://github.com/Rain-Code-SYS/protocol-api.git#subdirectory=protocol_sdk)
 ```
 
 1. ตัวอย่างการนำไปใช้ใน Tissue Resistance Model (tissue_model.py)
