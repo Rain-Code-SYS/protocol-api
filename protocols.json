@@ -34,85 +34,67 @@
   },
   "trig_protocol_2": {
     "protocol_id": "trig_protocol_2",
-    "name": "Haptic Device Telemetry",
-    "version": "1.0",
-    "format_type": "Delimited",
+    "name": "Haptic Device Telemetry Input",
+    "version": "1.0.0",
+    "format_type": "delimited",
     "delimiter": ";",
     "fields": [
       {
-        "name": "p",
+        "name": "pitch",
         "data_type": "float",
         "byte_length": null,
-        "description": "pitch angle"
+        "description": null
       },
       {
-        "name": "y",
+        "name": "yaw",
         "data_type": "float",
         "byte_length": null,
-        "description": "yaw angle"
+        "description": null
       },
       {
-        "name": "z",
+        "name": "theta2",
         "data_type": "float",
         "byte_length": null,
-        "description": "insertion depth"
-      },
-      {
-        "name": "zdot",
-        "data_type": "float",
-        "byte_length": null,
-        "description": "insertion speed"
+        "description": null
       },
       {
         "name": "touch",
         "data_type": "int",
         "byte_length": null,
-        "description": "needle holding state"
-      },
-      {
-        "name": "bp",
-        "data_type": "int",
-        "byte_length": null,
-        "description": "brake state (pitch)"
-      },
-      {
-        "name": "by",
-        "data_type": "int",
-        "byte_length": null,
-        "description": "brake state (yaw)"
+        "description": null
       }
     ]
   },
   "trig_protocol_3": {
     "protocol_id": "trig_protocol_3",
-    "name": "Haptic Control Command",
-    "version": "1.0",
-    "format_type": "Delimited",
+    "name": "Haptic Control Command Output",
+    "version": "1.0.0",
+    "format_type": "delimited",
     "delimiter": ";",
     "fields": [
       {
         "name": "Ki",
         "data_type": "float",
         "byte_length": null,
-        "description": "Current Constant Value"
+        "description": null
       },
       {
         "name": "Kv",
         "data_type": "float",
         "byte_length": null,
-        "description": "Voltage Constant Value"
+        "description": null
       },
       {
         "name": "bp",
         "data_type": "int",
         "byte_length": null,
-        "description": "brake state (pitch)"
+        "description": null
       },
       {
         "name": "by",
         "data_type": "int",
         "byte_length": null,
-        "description": "brake state (yaw)"
+        "description": null
       }
     ]
   }
