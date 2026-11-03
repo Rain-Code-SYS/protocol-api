@@ -5,178 +5,173 @@ from protocol_sdk.client import ProtocolClient
 class TissueResistanceModel:
     def __init__(self, api_url="http://127.0.0.1:8000"):
         self.client = ProtocolClient(base_url=api_url)
+
+        # ==========================================
+        # 1. พารามิเตอร์ทางกายภาพของระบบ (Physical Parameters)
+        # ==========================================
+        self.R1 = 0.031          # ความยาวแขนมอเตอร์ Crank Radius (m)
+        self.R2 = 0.028          # ความยาวก้านส่งกำลัง Connecting Rod (m)
+        self.m1 = 0.016768       # มวลรวมของก้อนสไลด์และหัวจับเข็ม (kg)
+        self.g  = 9.81           # แรงโน้มถ่วงโลก (m/s^2)
+
+        # คำนวณระยะเริ่มต้น s(0) เมื่อ theta2 = 0 deg (ระยะยืดสูงสุด)
+        self.s0 = self.R1 + self.R2  # 0.031 + 0.028 = 0.059 m (59 mm)
+
+        # ==========================================
+        # 2. พารามิเตอร์ชั้นเนื้อเยื่อ (Tissue Layer Boundaries)
+        # ==========================================
+        self.x_p = 0.003         # ระยะแทงทะลุผิวหนัง Skin Puncture (3 mm)
+        self.delta1 = 0.001      # ช่วง Blend 1 (1 mm)
+        self.x_trans = 0.012     # จุดเปลี่ยนจากไขมันเข้ากล้ามเนื้อ (12 mm)
+        self.x_pleura = 0.025    # ระยะแทงทะลุเยื่อหุ้มปอด (25 mm)
+        self.delta2 = 0.001      # ช่วง Blend 2 (1 mm)
+
+        # ค่าความแข็งและความต้านทาน
+        self.k_skin = 1200.0     # (N/m)
+        self.k_muscle = 800.0    # (N/m)
+        self.f_cut_fat = 1.5     # แรงตัดชั้นไขมัน (N)
+        self.f_fric_in = 0.8     # แรงเสียดทานตอนแทงเข้า (N)
+        self.f_fric_out = 0.5    # แรงเสียดทานตอนถอนออก (N)
+        self.gamma_h = 0.3       # สัมประสิทธิ์ Hysteresis ผิวหนัง
+        self.gamma_hm = 0.4      # สัมประสิทธิ์ Hysteresis กล้ามเนื้อ
+
+        # สถานะติดตามความลึกสูงสุด (State Tracking)
+        self.x_max = 0.0
+        self.last_x = 0.0
+        self.last_time = time.time()
+
+    def calculate_kinematics(self, theta1_deg: float, theta2_deg: float):
+        """
+        คำนวณระยะการกระจัดเชิงเส้น s(theta2), Insertion Depth (x), 
+        Insertion Speed (v) และ Jacobian J(theta2)
+        """
+        # แปลงมุมเป็น Radian
+        th1 = math.radians(theta1_deg) # yaw angle (มุมเอียงของราง)
+        th2 = math.radians(theta2_deg) # motor rotation angle (0 - 60 deg)
+
+        # 1. ระยะการกระจัด s(theta2) ตามสมการ Slider-Crank
+        sin_th2 = math.sin(th2)
+        cos_th2 = math.cos(th2)
         
-        # =========================================================================
-        # ⚙️ 1. กำหนดพารามิเตอร์ของชั้นเนื้อเยื่อ (สามารถปรับแก้ค่าได้ง่ายตรงนี้)
-        # =========================================================================
-        # --- ขอบเขตความลึกของแต่ละชั้น (หน่วย: เมตร) ---
-        self.x_p = 0.003       # ระยะแทงทะลุชั้นผิวหนัง Skin Puncture Depth (3 mm)
-        self.delta1 = 0.001    # ช่วงระยะ Blend หลังผิวหนังขาด (1 mm)
-        self.x_trans = 0.012   # จุดเปลี่ยนจากชั้นไขมันเข้าสู่ชั้นกล้ามเนื้อ (12 mm)
-        self.x_pleura = 0.025  # ระยะจุดทะลุผ่านชั้นเยื่อหุ้มปอด Pleura (25 mm)
-        self.delta2 = 0.001    # ช่วงระยะ Blend หลังเยื่อหุ้มปอดขาด (1 mm)
+        sqrt_term = math.sqrt(max(0, self.R2**2 - (self.R1 * sin_th2)**2))
+        s = self.R1 * cos_th2 + sqrt_term
 
-        # --- ค่ายืดหยุ่นและความแข็ง (Stiffness / Elastic Modulus) ---
-        self.k_skin = 1200.0   # ความแข็งชั้นผิวหนัง (N/m)
-        self.k_muscle = 800.0  # ความแข็งชั้นกล้ามเนื้อ (N/m)
+        # 2. คำนวณระยะแทง x (Insertion Depth: 0 - 36 mm)
+        # เมื่อ theta2 = 0 deg -> x = 0 mm, เมื่อ theta2 = 60 deg -> x = 35.58 mm (~36 mm)
+        x = self.s0 - s  
 
-        # --- แรงตัดขาดและแรงเสียดทาน (Cutting Force & Friction) ---
-        self.f_cut_fat = 1.2   # แรงตัดผ่านชั้นไขมัน (N)
-        self.f_cut_pleura = 2.5# แรงตัดผ่านชั้นเยื่อหุ้มปอด (N)
-        self.b_fric = 5.0      # ค่าความหนืดแรงเสียดทาน Viscous Friction Coefficient (N·s/m)
-        self.c_fric = 0.5      # ค่าแรงเสียดทานจลน์คงที่ Coulomb Friction (N)
-
-        # --- ค่าสัมพรรธ์คลายตัวตอนถอยเข็ม (Hysteresis Factors) ---
-        self.gamma_h = 0.35    # สัดส่วนแรงเหลือเมื่อถอยเข็มออกจากชั้นผิวหนัง (0.0 - 1.0)
-        self.gamma_hm = 0.45   # สัดส่วนแรงเหลือเมื่อถอยเข็มออกจากชั้นกล้ามเนื้อ (0.0 - 1.0)
-
-        # --- พารามิเตอร์ทางกลไก Slider-Crank ---
-        self.R1 = 0.031        # ความยาวแขนมอเตอร์ (m)
-        self.R2 = 0.028        # ความยาวก้านส่งกำลัง (m)
-        self.M1 = 0.016768     # มวลรวมก้อนสไลด์ (kg)
-        self.G = 9.81          # Gravity (m/s^2)
-
-        # ตัวแปรเก็บสถานะการเคลื่อนที่
-        self.prev_s = 0.0
-        self.prev_time = time.time()
-        self.x_max = 0.0       # ความลึกสูงสุดที่เคยแทงเข้าไปได้
-
-    # =========================================================================
-    # 🧮 2. ฟังก์ชันย่อยสำหรับคำนวณส่วนประกอบของแรง (Sub-Force Calculations)
-    # =========================================================================
-    def f_skin(self, x):
-        """แรงต้านการยืดของผิวหนัง"""
-        return self.k_skin * x
-
-    def f_muscle(self, x):
-        """แรงต้านการยืดของชั้นกล้ามเนื้อ"""
-        return self.k_muscle * (x - self.x_trans)
-
-    def f_fric_in(self, x, v):
-        """แรงเสียดทานขณะแทงเข็มเข้า (v >= 0)"""
-        return self.b_fric * v + (self.c_fric if v > 0 else 0.0)
-
-    def f_fric_out(self, x, v):
-        """แรงเสียดทานขณะดึงเข็มออก (v < 0)"""
-        return self.b_fric * abs(v) + self.c_fric
-
-    def f_blend1(self, x):
-        """ช่วงทรานซิชันเปลี่ยนผ่านหลังผิวหนังขาด (Transition Zone 1)"""
-        ratio = (x - self.x_p) / self.delta1
-        f_skin_max = self.f_skin(self.x_p)
-        return (1.0 - ratio) * f_skin_max + ratio * self.f_cut_fat
-
-    def f_blend2(self, x):
-        """ช่วงทรานซิชันเปลี่ยนผ่านหลังเยื่อหุ้มปอดขาด (Transition Zone 2)"""
-        ratio = (x - (self.x_pleura)) / self.delta2
-        return (1.0 - ratio) * self.f_cut_pleura + ratio * 0.0
-
-    # =========================================================================
-    # 🎯 3. สมการแรงต้านรวม F_total(x, v, x_max) ตาม Piecewise Model
-    # =========================================================================
-    def calculate_f_total(self, x, v, x_max):
-        """คำนวณแรงต้านรวมตามตำแหน่งความลึก (x), ความเร็ว (v) และ ความลึกสูงสุด (x_max)"""
+        # 3. คำนวณความเร็ว v = dx/dt (Insertion Speed)
+        now = time.time()
+        dt = max(1e-4, now - self.last_time)
+        v = (x - self.last_x) / dt
         
-        # 1. ชั้นผิวหนัง (Skin Layer: 0 <= x < x_p)
-        if 0 <= x < self.x_p and x_max < self.x_p:
+        self.last_x = x
+        self.last_time = now
+        if x > self.x_max:
+            self.x_max = x
+
+        # 4. คำนวณ Jacobian J(theta2)
+        denom = math.sqrt(max(1e-6, self.R2**2 - (self.R1**2) * (sin_th2**2)))
+        J = -self.R1 * sin_th2 - ((self.R1**2) * sin_th2 * cos_th2) / denom
+
+        return x, v, th1, J
+
+    def calculate_tissue_force(self, x: float, v: float) -> float:
+        """ คำนวณแรงต้านเนื้อเยื่อ F_total(x, v, x_max) """
+        if x < 0:
+            return 0.0
+
+        # --- 1. ชั้นผิวหนัง (Skin Layer: 0 <= x < x_p) ---
+        if x < self.x_p and self.x_max < self.x_p:
+            f_skin = self.k_skin * x
             if v >= 0:
-                return self.f_skin(x) + self.f_fric_in(x, v)
+                return f_skin + self.f_fric_in
             else:
-                return self.gamma_h * self.f_skin(x) + self.f_fric_out(x, v)
+                return self.gamma_h * f_skin + self.f_fric_out
 
-        # 2. ช่วงรอยต่อหลังผิวหนังขาด (Skin Puncture Blend Zone: x_p <= x < x_p + delta1)
-        elif self.x_p <= x < (self.x_p + self.delta1) and v >= 0:
-            return self.f_blend1(x) + self.f_fric_in(x, v)
-
-        # 3. ชั้นไขมันใต้ผิวหนัง (Subcutaneous Fat Layer: x_p + delta1 <= x < x_trans)
-        elif (self.x_p + self.delta1) <= x < self.x_trans and v >= 0:
-            return self.f_cut_fat + self.f_fric_in(x, v)
-
-        # 4. ชั้นกล้ามเนื้อ (Muscle Layer: x_trans <= x < x_pleura)
-        elif self.x_trans <= x < self.x_pleura:
+        # --- 2. ช่วง Blend 1 (x_p <= x < x_p + delta1) ---
+        elif x < (self.x_p + self.delta1):
             if v >= 0:
-                return self.f_cut_fat + self.f_muscle(x) + self.f_fric_in(x, v)
+                f_blend1 = self.f_cut_fat * ((x - self.x_p) / self.delta1)
+                return f_blend1 + self.f_fric_in
             else:
-                return self.gamma_hm * self.f_muscle(x) + self.f_fric_out(x, v)
+                return self.f_fric_out
 
-        # 5. ช่วงรอยต่อหลังเยื่อหุ้มปอดขาด (Pleura Puncture Blend Zone: x_pleura <= x < x_pleura + delta2)
-        elif self.x_pleura <= x < (self.x_pleura + self.delta2) and v >= 0:
-            return self.f_blend2(x) + self.f_fric_in(x, v)
+        # --- 3. ชั้นไขมัน (Fat Layer: x_p + delta1 <= x < x_trans) ---
+        elif x < self.x_trans:
+            if v >= 0:
+                return self.f_cut_fat + self.f_fric_in
+            else:
+                return self.f_fric_out
 
-        # 6. กรณีอื่นๆ / แทงพ้นทะลุช่องอกแล้ว (Otherwise)
+        # --- 4. ชั้นกล้ามเนื้อ (Muscle Layer: x_trans <= x < x_pleura) ---
+        elif x < self.x_pleura:
+            f_muscle = self.k_muscle * (x - self.x_trans)
+            if v >= 0:
+                return self.f_cut_fat + f_muscle + self.f_fric_in
+            else:
+                return self.gamma_hm * f_muscle + self.f_fric_out
+
+        # --- 5. ช่วง Blend 2 (x_pleura <= x < x_pleura + delta2) ---
+        elif x < (self.x_pleura + self.delta2):
+            if v >= 0:
+                f_blend2 = 2.0 * (1.0 - (x - self.x_pleura) / self.delta2)
+                return f_blend2 + self.f_fric_in
+            else:
+                return self.f_fric_out
+
+        # --- 6. ทะลุเยื่อหุ้มปอด / ทะลุผ่านทั้งหมด ---
         else:
-            if v >= 0:
-                return self.f_fric_in(x, v)
-            else:
-                return self.f_fric_out(x, v)
+            return self.f_fric_in if v >= 0 else self.f_fric_out
 
-    # =========================================================================
-    # 🔄 4. คำนวณ Kinematics & ลูปหลัก
-    # =========================================================================
-    def calculate_kinematics(self, theta2_deg):
-        theta2_rad = math.radians(theta2_deg)
-        sin_t2 = math.sin(theta2_rad)
-        cos_t2 = math.cos(theta2_rad)
+    def process_telemetry(self, raw_telemetry_str: str) -> str:
+        """
+        รับข้อความ Trig Protocol 2 (pitch;yaw;theta2;touch)
+        คำนวณและส่งกลับข้อความ Trig Protocol 3 (Ki;Kv;bp;by)
+        """
+        # Parse Telemetry
+        telemetry = self.client.parse_message("trig_protocol_2", raw_telemetry_str)
         
-        sqrt_term = math.sqrt(max(0.0, self.R2**2 - (self.R1 * sin_t2)**2))
-        s = self.R1 * cos_t2 + sqrt_term  # ระยะการกระจัด S (เมตร)
-        
-        if sqrt_term != 0:
-            j_theta2 = -self.R1 * sin_t2 - ((self.R1**2 * sin_t2 * cos_t2) / sqrt_term) # Jacobian
-        else:
-            j_theta2 = 0.0
-            
-        return s, j_theta2
+        yaw = float(telemetry["yaw"])       # theta1 (มุมเอียงของราง)
+        theta2 = float(telemetry["theta2"]) # มุมมอเตอร์ Gimbal (0 - 60 deg)
+        touch = int(telemetry["touch"])     # สัมผัส (0 หรือ 1)
 
-    def process_telemetry(self, raw_serial_str):
-        # 1. ถอดรหัสข้อความจาก Haptic Telemetry ผ่าน SDK
-        telemetry = self.client.parse_message("trig_protocol_2", raw_serial_str)
-        
-        pitch = telemetry["pitch"]
-        yaw_deg = telemetry["yaw"]
-        theta2_deg = telemetry["theta2"]
-        touch = telemetry["touch"]
-
-        # คำนวณ delta_t สำหรับหาความเร็ว v
-        curr_time = time.time()
-        dt = max(0.0001, curr_time - self.prev_time)
-        
-        # 2. คำนวณ Kinematics และ Update ความลึกสูงสุด (x_max)
-        s, j_theta2 = self.calculate_kinematics(theta2_deg)
-        v = (s - self.prev_s) / dt
-        
-        self.prev_s = s
-        self.prev_time = curr_time
-        self.x_max = max(self.x_max, s)
-
-        # 3. คำนวณแรงต้านรวม F_total และ แรงบิดรวม tau_total
-        f_total = self.calculate_f_total(s, v, self.x_max)
-        yaw_rad = math.radians(yaw_deg)
-        
-        tau_total = (f_total + self.M1 * self.G * math.sin(yaw_rad)) * j_theta2
-
-        # 4. แปลงแรงบิดเป็น Gain สำหรับ Gimbal Motor (Ki, Kv)
-        ki = abs(tau_total) * 10.0
-        kv = abs(v) * 2.5 + 0.5
-
-        # 5. กำหนดสถานะ Touch Sensor (0 = ไม่สัมผัส, 1 = สัมผัส)
+        # ตรวจสอบ Touch Sensor: ถ้า touch == 0 (ไม่สัมผัส) ให้เบรกทำงานทันที
         if touch == 0:
-            bp, by = 1, 1  # ปลดล็อก[cite: 4]
-        else:
-            bp, by = 0, 0  # ต้านแรง[cite: 4]
+            command_data = {"Ki": 0.0, "Kv": 0.0, "bp": 1, "by": 1}
+            return self.client.build_message("trig_protocol_3", command_data)
 
-        # 6. สร้างข้อความ Command ผ่าน SDK ส่งกลับฮาร์ดแวร์
-        command_data = {"Ki": ki, "Kv": kv, "bp": bp, "by": by}
+        # 1. คำนวณทาง Kinematics
+        x, v, th1_rad, J = self.calculate_kinematics(yaw, theta2)
+
+        # 2. คำนวณแรงต้าน F_total
+        f_total = self.calculate_tissue_force(x, v)
+
+        # 3. คำนวณแรงบิดรวม tau_total = (F_total + m * g * sin(theta1)) * J(theta2)
+        gravity_comp = self.m1 * self.g * math.sin(th1_rad)
+        tau_total = (f_total + gravity_comp) * J
+
+        # 4. แปลงแรงบิด tau_total เป็นค่า Gain (Ki, Kv) สำหรับขับ Gimbal Motor
+        ki_command = abs(tau_total)
+        kv_command = 12.0  # แรงดันควบคุมคงที่ 12V
+
+        command_data = {
+            "Ki": round(ki_command, 4),
+            "Kv": round(kv_command, 2),
+            "bp": 0,  # สัมผัสแล้ว ปลดเบรก
+            "by": 0
+        }
+
         return self.client.build_message("trig_protocol_3", command_data)
 
 
-# --- ทดสอบจำลองการทำงาน ---
 if __name__ == "__main__":
     model = TissueResistanceModel()
     
-    # ตัวอย่างทดสอบแทงเข้าชั้นผิวหนัง: theta2 = 10 องศา, yaw = 15 องศา, touch = 1
-    test_input = "0.0;15.0;10.0;1"
-    output_cmd = model.process_telemetry(test_input)
+    # ทดสอบกรณี Touch = 0 (ไม่สัมผัส)
+    out_no_touch = model.process_telemetry("0.0;15.0;10.0;0")
+    print(f"🚫 No Touch Output -> {out_no_touch}")
     
-    print(f"📥 Input: {test_input}")
-    print(f"📤 Output Command (Ki;Kv;bp;by): {output_cmd}")
+    # ทดสอบกรณี Touch = 1 (กดลงไป theta2 = 30 องศา)
+    out_touch = model.process_telemetry("0.0;15.0;30.0;1")
+    print(f"🎯 Touch Active Output -> {out_touch}")
