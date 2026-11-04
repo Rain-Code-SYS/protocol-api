@@ -43,12 +43,12 @@ function selectMode(element) {
   configState.practice_mode = parseInt(element.getAttribute('data-value'));
 }
 
-// ส่ง Trig Protocol 1 ไปยัง FastAPI Backend
+// ส่ง Trig Protocol 1 ไปยัง FastAPI Backend และสลับไปหน้า Simulation
 async function submitTrigProtocol1() {
   console.log("🚀 Sending Trig Protocol (1):", configState);
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/v1/protocols/trig_protocol_1/build', {
+    const response = await fetch('/api/v1/protocols/trig_protocol_1/build', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(configState)
@@ -56,12 +56,21 @@ async function submitTrigProtocol1() {
 
     if (response.ok) {
       const data = await response.json();
-      alert(`✅ ส่งข้อมูล Trig Protocol (1) สำเร็จ!\nPayload: ${JSON.stringify(data)}`);
+      console.log("✅ API Build Success:", data);
+
+      // บันทึกค่า Config เก็บไว้ให้หน้า simulation.html อ่านใช้งานต่อ
+      sessionStorage.setItem('simConfig', JSON.stringify(configState));
+
+      // ✅ สั่งเปลี่ยนหน้าไปยังหน้า Unity Simulation ทันที
+      window.location.href = "/simulation";
     } else {
       alert("❌ ส่งข้อมูลไม่สำเร็จ ตรวจสอบการรัน FastAPI Server");
     }
   } catch (error) {
     console.error("API Error:", error);
-    alert(`⚡ ส่งข้อมูลจำลอง: \nAge=${configState.age}, Difficulty=${configState.difficulty}, CaseType=${configState.case_type}, PracticeMode=${configState.practice_mode}`);
+    
+    // กรณี Offline/Dev Mode: บันทึกค่าและอนุญาตให้เปลี่ยนหน้าทดสอบได้
+    sessionStorage.setItem('simConfig', JSON.stringify(configState));
+    window.location.href = "/simulation";
   }
 }

@@ -1,59 +1,74 @@
-import time
+import asyncio
+import json
+import websockets
 import serial
-import serial.tools.list_ports
-from tissue_model import TissueResistanceModel
 
-def find_arduino_port():
-    """ ค้นหาพอร์ต COM ของ Arduino โดยอัตโนมัติ """
-    ports = serial.tools.list_ports.comports()
-    for port in ports:
-        if "Arduino" in port.description or "CH340" in port.description or "USB Serial" in port.description:
-            return port.device
+SERIAL_PORT = "COM3"
+BAUD_RATE = 115200
+WS_SERVER_URL = "ws://127.0.0.1:8000/ws/simulation"
+
+def parse_trig_protocol_2(raw_string: str) -> dict:
+    try:
+        parts = raw_string.strip().split(";")
+        if len(parts) >= 7:
+            return {
+                "type": "telemetry",
+                "pitch": float(parts[0]),
+                "yaw": float(parts[1]),
+                "depth": float(parts[2]),
+                "speed": float(parts[3]),
+                "touch": int(parts[4]),
+                "bp": int(parts[5]),
+                "by": int(parts[6])
+            }
+    except Exception:
+        pass
     return None
 
-def main():
-    # 1. กำหนดพอร์ต COM (ปรับเปลี่ยนตามพอร์ตจริง เช่น 'COM3' หรือให้ระบบค้นหาอัตโนมัติ)
-    port_name = find_arduino_port() or "COM3"
-    baud_rate = 115200
+def build_trig_protocol_3(ki: float, kv: float, bp: int, by: int) -> str:
+    return f"{ki:.2f};{kv:.2f};{bp};{by};\n"
 
-    print(f"🔌 กำลังเชื่อมต่อกับ Arduino ที่พอร์ต {port_name} ({baud_rate} baud)...")
-
+async def run_serial_bridge():
+    ser = None
     try:
-        ser = serial.Serial(port_name, baud_rate, timeout=0.1)
-        time.sleep(2)  # รอ Arduino Reset ระบบ
-        print("✅ เชื่อมต่อ Serial Port สำเร็จ!")
-    except Exception as e:
-        print(f"❌ ไม่สามารถเปิดพอร์ต {port_name} ได้: {e}")
-        print("โปรดตรวจสอบการเชื่อมต่อบอร์ด หรือเปลี่ยนชื่อ COM Port ในไฟล์ serial_bridge.py")
-        return
+        ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=0.1)
+        print(f"✅ Connected to Hardware on {SERIAL_PORT}")
+    except Exception:
+        print(f"⚠️ Could not open {SERIAL_PORT}. Running in MOCK SIMULATION mode.")
 
-    # 2. เริ่มต้นโมเดล Tissue Resistance
-    model = TissueResistanceModel()
-
-    print("🚀 เริ่มต้นระบบ Real-Time Serial Bridge (กด Ctrl+C เพื่อเลิกรัน)")
-    
-    try:
-        while True:
-            # อ่านข้อมูล Telemetry (Trig Protocol 2) จาก Arduino
-            if ser.in_waiting > 0:
-                raw_line = ser.readline().decode('utf-8', errors='ignore').strip()
+    # วนลูป Auto-Reconnect ป้องกันโปรแกรม Crash เมื่อ Server ยังไม่พร้อม
+    while True:
+        try:
+            print(f"🔄 Connecting to WebSocket Hub ({WS_SERVER_URL})...")
+            async with websockets.connect(WS_SERVER_URL) as websocket:
+                print("✅ Connected to FastAPI WebSocket Hub")
+                mock_depth = 0.0
                 
-                if raw_line and raw_line.count(';') == 3:
-                    # ประมวลผลผ่าน Tissue Model เพื่อสร้างคำสั่ง Trig Protocol 3
-                    command_string = model.process_telemetry(raw_line)
-                    
-                    # ส่งคำสั่งกลับไปยัง Arduino
-                    ser.write((command_string + '\n').encode('utf-8'))
-                    
-                    print(f"[IN] {raw_line}  -->  [OUT] {command_string}")
+                while True:
+                    raw_data = ""
+                    if ser and ser.in_waiting > 0:
+                        raw_data = ser.readline().decode('utf-8', errors='ignore')
+                    else:
+                        mock_depth = (mock_depth + 0.5) if mock_depth < 80 else 0
+                        raw_data = f"12.5;3.2;{mock_depth:.1f};1.2;1;0;0;"
 
-            time.sleep(0.005)  # Delay 5ms ป้องกัน CPU Overload
+                    telemetry = parse_trig_protocol_2(raw_data)
+                    if telemetry:
+                        await websocket.send(json.dumps(telemetry))
 
-    except KeyboardInterrupt:
-        print("\nหยุดการทำงานของ Serial Bridge")
-    finally:
-        ser.close()
-        print("ปิดการเชื่อมต่อ Serial Port เรียบร้อย")
+                        # Trig Protocol 3 Logic (คำนวณแรงต้าน)
+                        depth = telemetry.get("depth", 0)
+                        bp_state = 1 if depth > 50 else 0
+                        cmd_p3 = build_trig_protocol_3(ki=1.5, kv=12.0, bp=bp_state, by=0)
+                        
+                        if ser and ser.is_open:
+                            ser.write(cmd_p3.encode('utf-8'))
+
+                    await asyncio.sleep(0.05)
+
+        except (websockets.exceptions.WebSocketException, OSError, TimeoutError):
+            print("⚠️ Server not ready or connection lost. Retrying in 3 seconds...")
+            await asyncio.sleep(3)
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(run_serial_bridge())

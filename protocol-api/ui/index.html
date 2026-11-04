@@ -3,92 +3,87 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Medical Simulation Setup</title>
+  <title>Haptic Medical Simulator - Dashboard</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app-container">
-    
-    <!-- Navbar Header -->
-    <header class="navbar">
-      <div class="nav-links">
-        <a href="#" class="nav-item active">Dashboard</a>
-        <a href="#" class="nav-item">History</a>
-        <a href="#" class="nav-item">Modules</a>
-        <a href="#" class="nav-item">Settings</a>
-      </div>
-      <div class="user-profile">
-        <span>Student Profile</span>
-        <div class="avatar">👤</div>
-      </div>
-    </header>
+  <!-- Header Navbar -->
+  <header class="navbar">
+    <div class="nav-brand">
+      <a href="/" class="nav-item active">🪟 Dashboard</a>
+      <a href="/history" class="nav-item">🕒 History</a>
+      <a href="#" class="nav-item">📦 Modules</a>
+      <a href="#" class="nav-item">⚙️ Settings</a>
+    </div>
+    <div class="profile-pill">
+      <span>Student Profile</span>
+      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Avatar" class="avatar-img">
+      <span class="arrow-down">▼</span>
+    </div>
+  </header>
 
-    <!-- STEP 1: Select Training Modules -->
-    <section id="step-modules" class="screen active">
-      <h1 class="title">Select Training Modules</h1>
-      <p class="subtitle">Choose procedures for your today's training</p>
+  <!-- Main Content Area -->
+  <main class="dashboard-container">
+    <div class="hero-section">
+      <h1>Select Training Modules</h1>
+      <p>Choose procedures for your today's training</p>
+    </div>
 
-      <div class="cards-grid">
-        <!-- Module 1 -->
-        <div class="card module-card" onclick="selectModule('thoracentesis')">
-          <span class="badge intermediate">Intermediate</span>
-          <div class="card-img-box">
-            <img src="assets/thoracentesis.png" alt="Thoracentesis" onerror="this.src='https://via.placeholder.com/120?text=Thoracentesis'">
-          </div>
-          <h3>Thoracentesis</h3>
-          <p>Pleural space drainage and chest tube insertion</p>
-          <button class="btn-link">Start Modules &rarr;</button>
-        </div>
-
-        <!-- Module 2 -->
-        <div class="card module-card" onclick="selectModule('paracentesis')">
-          <span class="badge advance">Advance</span>
-          <div class="card-img-box">
-            <img src="assets/paracentesis.png" alt="Paracentesis" onerror="this.src='https://via.placeholder.com/120?text=Paracentesis'">
-          </div>
-          <h3>Paracentesis</h3>
-          <p>Peritoneal fluid aspiration and patient prep</p>
-          <button class="btn-link">Start Modules &rarr;</button>
-        </div>
-
-        <!-- Module 3 -->
-        <div class="card module-card" onclick="selectModule('pericardiocentesis')">
-          <span class="badge advance">Advance</span>
-          <div class="card-img-box">
-            <img src="assets/pericardiocentesis.png" alt="Pericardiocentesis" onerror="this.src='https://via.placeholder.com/120?text=Pericardiocentesis'">
-          </div>
-          <h3>Pericardiocentesis</h3>
-          <p>Pericardial fluid aspiration and needle placement</p>
-          <button class="btn-link">Start Modules &rarr;</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- STEP 2: Simulation Setup (Case Configuration) -->
-    <section id="step-config" class="screen">
-      <div class="breadcrumb">
-        <strong id="selected-module-title">Thoracentesis</strong> &gt; Simulation Setup
+    <!-- Module Cards Grid -->
+    <div class="modules-grid">
+      <!-- Thoracentesis Card -->
+      <div class="module-card">
+        <div class="badge badge-intermediate"><span>●</span> Intermediate</div>
+        <div class="card-icon">🫁</div>
+        <h3>Thoracentesis</h3>
+        <p>Pleural space drainage and chest tube insertion</p>
+        <button class="btn-start-module" onclick="openSetupModal('Thoracentesis')">Start Modules ➔</button>
       </div>
 
-      <div class="config-panel">
+      <!-- Paracentesis Card -->
+      <div class="module-card">
+        <div class="badge badge-advance"><span>●</span> Advance</div>
+        <div class="card-icon">🩺</div>
+        <h3>Paracentesis</h3>
+        <p>Peritoneal fluid aspiration and patient prep</p>
+        <button class="btn-start-module" onclick="openSetupModal('Paracentesis')">Start Modules ➔</button>
+      </div>
+
+      <!-- Pericardiocentesis Card -->
+      <div class="module-card">
+        <div class="badge badge-advance"><span>●</span> Advance</div>
+        <div class="card-icon">🫀</div>
+        <h3>Pericardiocentesis</h3>
+        <p>Pericardial fluid aspiration and needle placement</p>
+        <button class="btn-start-module" onclick="openSetupModal('Pericardiocentesis')">Start Modules ➔</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Setup Modal (Popup) -->
+  <div id="setup-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-breadcrumb">
+        🫁 <strong id="modal-title">Thoracentesis</strong> <span>› Simulation Setup</span>
+      </div>
+
+      <div class="config-section">
         <h2>Case Configuration</h2>
         
-        <div class="config-grid">
-          <!-- Patient Age -->
+        <div class="config-row">
           <div class="config-group">
             <label>Patient Age</label>
-            <div class="pill-group" id="age-group">
-              <button class="btn-pill" data-value="0" onclick="setPill('age-group', this)">Pediatric</button>
-              <button class="btn-pill active" data-value="1" onclick="setPill('age-group', this)">Adult</button>
-              <button class="btn-pill" data-value="2" onclick="setPill('age-group', this)">Geriatric</button>
+            <div class="segmented-control" id="age-selector">
+              <button class="segment-btn" onclick="selectSegment('age', 0)">Pediatric</button>
+              <button class="segment-btn active" onclick="selectSegment('age', 1)">Adult</button>
+              <button class="segment-btn" onclick="selectSegment('age', 2)">Geriatric</button>
             </div>
           </div>
 
-          <!-- Difficulty Slider -->
           <div class="config-group">
             <label>Difficulty</label>
-            <div class="slider-box">
-              <input type="range" id="difficulty-slider" min="0" max="2" value="1" step="1" onchange="updateSliderLabel()">
+            <div class="range-slider-container">
+              <input type="range" min="0" max="2" value="1" id="difficulty-slider" class="styled-slider">
               <div class="slider-labels">
                 <span>Easy</span>
                 <span>Medium</span>
@@ -97,49 +92,40 @@
             </div>
           </div>
 
-          <!-- Case Types -->
           <div class="config-group">
             <label>Case Types</label>
-            <div class="pill-group" id="casetype-group">
-              <button class="btn-pill active" data-value="0" onclick="setPill('casetype-group', this)">Trauma</button>
-              <button class="btn-pill" data-value="1" onclick="setPill('casetype-group', this)">Emergency</button>
+            <div class="segmented-control" id="casetype-selector">
+              <button class="segment-btn active" onclick="selectSegment('case', 0)">Trauma</button>
+              <button class="segment-btn" onclick="selectSegment('case', 1)">Emergency</button>
             </div>
           </div>
         </div>
 
-        <h2 style="margin-top: 30px;">Select Training mode</h2>
-        
-        <div class="mode-grid" id="mode-group">
-          <!-- Mode 0: Tutorial -->
-          <div class="card mode-card" data-value="0" onclick="selectMode(this)">
-            <img src="assets/mode_tutorial.png" alt="Tutorial" onerror="this.src='https://via.placeholder.com/60?text=Tutorial'">
-            <h3>Tutorial</h3>
+        <h2 class="sub-title">Select Training mode</h2>
+        <div class="mode-cards-grid">
+          <div class="mode-card" onclick="selectMode(0, this)">
+            <div class="mode-icon">📖</div>
+            <h4>Tutorial</h4>
             <p>Interactive visual prompts and step-by-step guidance.</p>
           </div>
-
-          <!-- Mode 1: Guide -->
-          <div class="card mode-card active" data-value="1" onclick="selectMode(this)">
-            <img src="assets/mode_guide.png" alt="Guide" onerror="this.src='https://via.placeholder.com/60?text=Guide'">
-            <h3>Guide</h3>
+          <div class="mode-card active" onclick="selectMode(1, this)">
+            <div class="mode-icon">📘</div>
+            <h4>Guide</h4>
             <p>Real-time cue and feedback during procedure.</p>
           </div>
-
-          <!-- Mode 2: Blind -->
-          <div class="card mode-card" data-value="2" onclick="selectMode(this)">
-            <img src="assets/mode_blind.png" alt="Blind" onerror="this.src='https://via.placeholder.com/60?text=Blind'">
-            <h3>Blind</h3>
+          <div class="mode-card" onclick="selectMode(2, this)">
+            <div class="mode-icon">👁️‍🗨️</div>
+            <h4>Blind</h4>
             <p>Independent performance testing with no assistance.</p>
           </div>
         </div>
-
-        <!-- Footer Actions -->
-        <div class="action-bar">
-          <button class="btn-secondary" onclick="goBack()">Cancel</button>
-          <button class="btn-primary" onclick="submitTrigProtocol1()">Start</button>
-        </div>
       </div>
-    </section>
 
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeSetupModal()">Cancel</button>
+        <button class="btn-primary-start" onclick="launchSimulation()">Start</button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

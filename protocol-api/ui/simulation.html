@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulation Mode - Medical Haptic Simulator</title>
+  <link rel="stylesheet" href="simulation.css">
+</head>
+<body>
+  <!-- Top Navigation Header -->
+  <header class="sim-navbar">
+    <div class="sim-breadcrumb">
+      <span class="module-icon">🫁</span>
+      <strong class="sim-title">Thoracentesis</strong>
+      <span class="chevron">›</span>
+      <span class="sub-path">Simulation</span>
+    </div>
+    <div class="profile-pill">
+      <span>Student Profile</span>
+      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="Avatar" class="avatar-img">
+      <span class="arrow-down">▼</span>
+    </div>
+  </header>
+
+  <!-- 3D Canvas Container -->
+  <div class="sim-viewport">
+    <div id="unity-container">
+      <canvas id="unity-canvas"></canvas>
+    </div>
+
+    <!-- FLOATING UI OVERLAYS -->
+    
+    <!-- Top-Left Toolbar Panel -->
+    <div class="floating-panel toolbar-panel">
+      <div class="panel-header">Toolbar</div>
+      <div class="toolbar-grid">
+        <button class="tool-btn active"><span class="tool-icon">➤</span>Pointer</button>
+        <button class="tool-btn"><span class="tool-icon">🔄</span>Camera Orbit</button>
+        <button class="tool-btn"><span class="tool-icon">🔍</span>Zoom</button>
+        <button class="tool-btn"><span class="tool-icon">💉</span>Needle</button>
+        <button class="tool-btn"><span class="tool-icon">🥞</span>Anatomical Layers</button>
+        <button class="tool-btn"><span class="tool-icon">📏</span>Measure</button>
+        <button class="tool-btn"><span class="tool-icon">↩️</span>Undo/Redo</button>
+      </div>
+    </div>
+
+    <!-- Bottom-Left Settings Panel -->
+    <div class="floating-panel settings-panel">
+      <div class="panel-header">⚙️ Settings</div>
+      <div class="setting-row">
+        <span>SFX On/Off</span>
+        <label class="switch">
+          <input type="checkbox" checked>
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <div class="setting-row">
+        <span>Force Feedback</span>
+        <label class="switch">
+          <input type="checkbox">
+          <span class="slider round"></span>
+        </label>
+      </div>
+      <div class="setting-row">
+        <span>Difficulty:</span>
+        <select class="styled-select">
+          <option>Practice</option>
+          <option>Medium</option>
+          <option>Hard</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Right Side Performance & Suggestions Panel -->
+    <div class="floating-panel performance-panel">
+      <div class="history-badge-btn" onclick="window.location.href='/history'">History & Analytics</div>
+      <h3>Performance & Suggestions</h3>
+
+      <div class="score-card">
+        <div class="score-header">
+          <span class="score-label">Success Rate</span>
+          <span class="btn-mini-history" onclick="window.location.href='/history'">History & Analytics</span>
+        </div>
+        <div class="score-number">88.4%</div>
+        <div class="score-trend positive">+3.2% from last attempt</div>
+
+        <div class="accuracy-row">
+          <span>Session accuracy</span>
+          <strong>91.2%</strong>
+        </div>
+        <!-- Sparkline Chart Placeholder -->
+        <svg class="sparkline-svg" viewBox="0 0 200 40">
+          <path d="M 0,30 Q 30,10 60,25 T 120,15 T 180,5 L 200,8" fill="none" stroke="#0096ff" stroke-width="3"/>
+        </svg>
+      </div>
+
+      <div class="metric-checklist">
+        <div class="check-item">
+          <span class="check-label">Insert angle:</span>
+          <span class="tag tag-guided">Guided</span>
+          <span class="check-val">94% score</span>
+        </div>
+        <div class="check-item">
+          <span class="check-label">Avoid 9th rib:</span>
+          <span class="tag tag-guided">Guided</span>
+          <span class="check-val">88% score</span>
+        </div>
+        <div class="check-item">
+          <span class="check-label">Steady insertion speed:</span>
+          <span class="tag tag-tutorial">Tutorial</span>
+          <span class="check-val warning">Needs practice</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="unity_bridge.js"></script>
+</body>
+</html>
