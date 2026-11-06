@@ -1,6 +1,6 @@
 import math
 import time
-from protocol_sdk.client import ProtocolClient
+from protocol_sdk import ProtocolClient
 
 class TissueResistanceModel:
     def __init__(self, api_url="http://127.0.0.1:8000"):
