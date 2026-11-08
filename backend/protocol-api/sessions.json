@@ -1,0 +1,13 @@
+[
+  {
+    "protocol_id": "trig_protocol_1",
+    "raw_value": 41,
+    "procedure": "thoracentesis",
+    "settings": {
+      "age": 1,
+      "difficulty": 1,
+      "case_type": 0,
+      "practice_mode": 1
+    }
+  }
+]

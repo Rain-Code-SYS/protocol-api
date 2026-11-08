@@ -1,0 +1,133 @@
+{
+  "trig_protocol_1": {
+    "protocol_id": "trig_protocol_1",
+    "name": "Simulation Practice Settings",
+    "version": "1.1",
+    "format_type": "bitfield",
+    "delimiter": null,
+    "bit_width": 7,
+    "fields": [
+      {
+        "name": "age",
+        "data_type": "int",
+        "byte_length": null,
+        "bit_offset": 5,
+        "bit_width": 2,
+        "max_value": 2,
+        "description": "Pediatric=0, Adult=1, Geriatric=2"
+      },
+      {
+        "name": "difficulty",
+        "data_type": "int",
+        "byte_length": null,
+        "bit_offset": 3,
+        "bit_width": 2,
+        "max_value": 2,
+        "description": "Easy=0, Medium=1, Hard=2"
+      },
+      {
+        "name": "case_type",
+        "data_type": "int",
+        "byte_length": null,
+        "bit_offset": 2,
+        "bit_width": 1,
+        "max_value": 1,
+        "description": "Basic=0, Emer/Trauma=1"
+      },
+      {
+        "name": "practice_mode",
+        "data_type": "int",
+        "byte_length": null,
+        "bit_offset": 0,
+        "bit_width": 2,
+        "max_value": 2,
+        "description": "Tutorial=0, Guide=1, Blind=2"
+      }
+    ]
+  },
+  "trig_protocol_2": {
+    "protocol_id": "trig_protocol_2",
+    "name": "Encoder Stream Input",
+    "version": "2.0.0",
+    "format_type": "delimited",
+    "delimiter": ";",
+    "fields": [
+      {
+        "name": "timestamp",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "Board time in milliseconds"
+      },
+      {
+        "name": "enc1",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "Encoder 1 raw count"
+      },
+      {
+        "name": "enc2",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "Encoder 2 raw count"
+      },
+      {
+        "name": "enc3",
+        "data_type": "int",
+        "byte_length": null,
+        "description": "Encoder 3 raw count"
+      }
+    ]
+  },
+  "trig_protocol_3": {
+    "protocol_id": "trig_protocol_3",
+    "name": "Haptic Control Command Output",
+    "version": "1.0.0",
+    "format_type": "delimited",
+    "delimiter": ";",
+    "fields": [
+      {
+        "name": "Ki",
+        "data_type": "float",
+        "byte_length": null,
+        "description": null
+      },
+      {
+        "name": "Kv",
+        "data_type": "float",
+        "byte_length": null,
+        "description": null
+      },
+      {
+        "name": "bp",
+        "data_type": "int",
+        "byte_length": null,
+        "description": null
+      },
+      {
+        "name": "by",
+        "data_type": "int",
+        "byte_length": null,
+        "description": null
+      }
+    ]
+  },
+  "trig_protocol_4": {
+    "protocol_id": "trig_protocol_4",
+    "name": "Lung Contact Flag",
+    "version": "1.0",
+    "format_type": "bitfield",
+    "delimiter": null,
+    "bit_width": 1,
+    "fields": [
+      {
+        "name": "lung_hit",
+        "data_type": "int",
+        "byte_length": null,
+        "bit_offset": 0,
+        "bit_width": 1,
+        "max_value": 1,
+        "description": "No lung contact=0, Lung contact=1"
+      }
+    ]
+  }
+}
