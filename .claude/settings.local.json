@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls venv/Scripts/python.exe)",
+      "Bash(venv/Scripts/python.exe -c \"import fastapi, uvicorn, protocol_sdk.client; from protocol_sdk.client import ProtocolClient; print\\('imports OK'\\)\")",
+      "Bash(venv/Scripts/python.exe -m pip install -e protocol_sdk/ -q)",
+      "Bash(venv/Scripts/python.exe -c \"from protocol_sdk.client import ProtocolClient; print\\('import OK'\\)\")"
+    ]
+  }
+}
