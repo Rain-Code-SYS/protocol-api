@@ -1,13 +1,13 @@
 # Simulation Setup UI (Thoracentesis / Paracentesis / Pericardiocentesis)
 
 เว็บ UI ของส่วน **Simulation Software 2 (UI + API + User Tracking)** ในโปรเจกต์เข็มจำลอง
-ผู้เรียนเลือกหัตถการ ตั้งค่าเคส แล้วกด Start ระบบจะแปลงค่าเป็นเลข INT (Trig Protocol 1) และส่งไปที่ฝั่ง Python
+ผู้เรียนเลือกหัตถการ ตั้งค่าเคส แล้วกด Start ระบบจะแปลงค่าเป็นเลข INT (Trig Protocol 1) และส่งตรงไปที่ FastAPI backend (`main.py` ที่พอร์ต 8000) เพื่อถอดรหัสและเก็บเป็น session
 
 ## ไฟล์
 | ไฟล์ | หน้าที่ |
 |---|---|
 | `index.html` | หน้าเว็บทั้งหมดในไฟล์เดียว (Dashboard, Simulation setup, History & Analytics, Settings) |
-| `server.py` | เซิร์ฟเวอร์ Flask: เปิดหน้าเว็บ และรับค่าที่ `POST /api/trig1` |
+| `server.py` | เซิร์ฟเวอร์ Flask: เปิดหน้าเว็บอย่างเดียว (ค่า Trig Protocol 1 ถูกส่งตรงจากหน้าเว็บไป FastAPI backend) |
 | `requirements.txt` | ไลบรารีที่ต้องติดตั้ง (flask, gunicorn) |
 
 ## วิธีรัน (Windows)
@@ -17,6 +17,7 @@
 2. ติดตั้ง Python 3.10 ขึ้นไป (ติ๊ก Add python.exe to PATH ตอนติดตั้ง)
 3. เปิด Terminal ในโฟลเดอร์ที่มีไฟล์เหล่านั้น แล้วพิมพ์ `pip install -r requirements.txt`
 4. พิมพ์ `python server.py`
+   > ต้องเปิด FastAPI backend (`main.py` ที่พอร์ต 8000) ควบคู่ไปด้วย ไม่งั้นปุ่ม Start จะเซฟค่าไม่สำเร็จ (ดูวิธีรันในโฟลเดอร์ `backend/protocol-api`)
 5. เปิดเบราว์เซอร์ที่ `http://localhost:5000`
 6. ถ้าอยากดูหน้า History พร้อมข้อมูลตัวอย่าง ให้พิมพ์ที่อยู่เว็บเป็น `http://localhost:5000/#history-demo`
    (ข้อมูลนี้เขียนขึ้นเพื่อดูหน้าตา ไม่ใช่ผลของผู้เรียนจริง และจะมีแถบ "Sample data" แจ้งไว้ ถ้ากดแท็บ History ตามปกติ หน้าจะว่างเปล่าจนกว่าจะมีข้อมูลจริง)
@@ -32,7 +33,7 @@
 | Training mode (MM) | 2 | 0 Tutorial, 1 Guide, 2 Blind |
 
 ตัวอย่าง: Adult, Medium, Basic, Guide = `0b0101001` = 41
-หน้าเว็บส่ง `{"value": 41, "procedure": "thoracentesis"}` ไปที่ `/api/trig1` และ `server.py` แกะค่ากลับด้วย `decode_trig1()`
+หน้าเว็บส่ง `{"value": 41, "procedure": "thoracentesis"}` ไปที่ FastAPI backend ที่ `POST http://localhost:8000/protocols/trig_protocol_1/ingest` และฝั่ง backend แกะบิตตาม schema `trig_protocol_1` (bitfield) แล้วเก็บเป็น session
 ค่า INT ไม่แสดงบนหน้าจอผู้ใช้ (เก็บไว้ฝั่งหลังบ้านเท่านั้น)
 
 ## หน้าเว็บ
@@ -42,8 +43,8 @@
 - `#settings` สลับภาษาไทย/อังกฤษ และโหมดสว่าง/มืด (เก็บใน localStorage ของเบราว์เซอร์)
 
 ## สิ่งที่ยังต้องทำต่อ
-- `server.py` แกะค่าแล้วแค่พิมพ์ออกหน้าจอ ยังไม่ได้เก็บหรือส่งต่อให้ 3D Simulation
-- Trig Protocol (1) ยังไม่มีฟิลด์หัตถการ (ตอนนี้ส่ง `procedure` แยกต่างหาก) ต้องตกลงกับทีม
+- Backend เก็บค่าที่ถอดได้ลง `sessions.json` แล้ว แต่ยังไม่ได้ส่งต่อให้ 3D Simulation
+- Trig Protocol (1) ยังไม่มีฟิลด์หัตถการ (ตอนนี้ส่ง `procedure` แยกต่างหาก และ backend เก็บแยกใน session) ต้องตกลงกับทีม
 - หน้า History ยังไม่มีข้อมูลจริง ใช้ `setHistoryData(list)` ใน `index.html` เพื่อใส่ข้อมูล รูปแบบข้อมูลอยู่ในคอมเมนต์ของโค้ด
 - เกณฑ์ผ่าน (`PASS_SCORE = 80`) เป็นค่าชั่วคราว ทีมยังไม่ได้ตกลง
 - แท็บ Modules และปุ่ม View ในตารางประวัติยังกดไม่ได้
