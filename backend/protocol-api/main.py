@@ -41,6 +41,26 @@ app.add_middleware(
 DB_FILE = "protocols.json"
 SESSIONS_FILE = "sessions.json"
 
+def load_db() -> Dict[str, dict]:
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def save_db(data: Dict[str, dict]) -> None:
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+def load_sessions() -> List[dict]:
+    if os.path.exists(SESSIONS_FILE):
+        with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+def save_sessions(data: List[dict]) -> None:
+    with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
 # Schema/session ของโปรโตคอลยังเก็บเป็นไฟล์ JSON (protocols.json อยู่ใน Git อยู่แล้ว ส่วน sessions.json เป็นแค่ log ชั่วคราว)
 protocols_db: Dict[str, dict] = load_db()
 sessions_db: List[dict] = load_sessions()
