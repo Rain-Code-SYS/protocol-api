@@ -265,6 +265,33 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
 .sett fieldset:last-child{margin-bottom:0}
 .sett-hint{margin:10px 0 0;color:var(--muted);font-size:.95rem}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ---- Login / profile menu ---- */
+.top{position:relative}
+.profile{cursor:pointer;user-select:none}
+.profile:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.pmenu{position:absolute;right:24px;top:calc(100% + 6px);z-index:50;min-width:220px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.pmenu[hidden]{display:none}
+.pm-as{color:var(--muted);font-size:.95rem}
+.pm-as b{color:var(--text)}
+.pmenu button{padding:9px 20px;font-size:.98rem}
+.auth{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.auth[hidden]{display:none}
+.auth-card{width:100%;max-width:400px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;display:flex;flex-direction:column;gap:14px}
+.auth-card h1{margin:0;font-size:1.5rem;text-align:center}
+.auth-sub{margin:0;text-align:center;color:var(--muted);font-size:.98rem}
+.auth-card label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:.98rem}
+.auth-card label[hidden]{display:none}
+.auth-card input{font:inherit;font-weight:400;padding:11px 14px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text)}
+.auth-card input:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+.auth-msg{min-height:1.3em;color:#d23b3b;font-size:.95rem;text-align:center}
+.auth-card .start{padding:12px}
+.auth-card .start:disabled{opacity:.6;cursor:wait}
+.auth-card .alt{background:none;border:0;color:var(--accent);padding:6px;font-size:.98rem}
+.auth-card .auth-lang{align-self:flex-end;padding:4px 10px;font-size:.9rem}
+.mod.soon{opacity:.55;cursor:not-allowed}
+.mod.soon:hover{transform:none;border-color:var(--line)}
+.mod.soon .go{cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -278,8 +305,25 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
     <a class="tab" href="#settings" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span data-i18n="sett">Settings</span></a>
   </nav>
   <div class="crumb" id="crumb" hidden><b id="procName">Thoracentesis</b> <span data-i18n="crumb">› Simulation setup</span></div>
-  <div class="profile"><span data-i18n="prof">Student Profile</span><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="currentColor" opacity=".2"/><circle cx="16" cy="12" r="5" fill="currentColor"/><path d="M6 27c1-6 5-8 10-8s9 2 10 8z" fill="currentColor"/></svg></div>
+  <div class="profile" id="profile" role="button" tabindex="0" aria-haspopup="true"><span id="profName">Student Profile</span><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="currentColor" opacity=".2"/><circle cx="16" cy="12" r="5" fill="currentColor"/><path d="M6 27c1-6 5-8 10-8s9 2 10 8z" fill="currentColor"/></svg></div>
+<div class="pmenu" id="pmenu" hidden>
+  <div class="pm-as"><span data-i18n="aAs">Signed in as</span> <b id="pmUser"></b></div>
+  <button type="button" class="cancel" id="pmOut" data-i18n="aLogout">Sign out</button>
+</div>
 </header>
+<div class="auth" id="auth" hidden>
+  <form class="auth-card" id="authForm" novalidate>
+    <button type="button" class="alt auth-lang" id="aLang">EN</button>
+    <h1 id="authTitle">Sign in</h1>
+    <p class="auth-sub" data-i18n="aSub">Your history and progress are saved to your own account</p>
+    <label><span data-i18n="aUser">Username</span><input id="aUser" autocomplete="username" maxlength="32" autocapitalize="none" spellcheck="false"></label>
+    <label><span data-i18n="aPass">Password</span><input id="aPass" type="password" autocomplete="current-password" maxlength="128"></label>
+    <label id="aPass2Row" hidden><span data-i18n="aPass2">Confirm password</span><input id="aPass2" type="password" autocomplete="new-password" maxlength="128"></label>
+    <div class="auth-msg" id="aMsg" role="alert"></div>
+    <button type="submit" class="start" id="aGo">Sign in</button>
+    <button type="button" class="alt" id="aSwitch">Create account</button>
+  </form>
+</div>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="syringe" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="15" width="20" height="10" rx="1.5" fill="currentColor" fill-opacity=".18"/><path d="M10 20H4M4 15v10M10 12v16M30 20h9M16 15v4M21 15v4M26 15v4"/></symbol></svg>
 <main class="wrap" id="view-dash">
@@ -291,15 +335,15 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
       <svg class="art" viewBox="0 0 130 104" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 98V44C22 26 32 16 52 16s30 10 30 28v54" fill="currentColor" fill-opacity=".14"/><path d="M52 22v22M52 44c-3 3-7 5-12 7M52 44c3 3 7 5 12 7"/><path d="M46 30C36 32 29 46 29 64c0 12 5 18 12 16 6-2 7-8 7-18V38c0-4-1-6-2-8z" fill="currentColor" fill-opacity=".14"/><path d="M58 30c10 2 17 16 17 34 0 12-5 18-12 16-6-2-7-8-7-18V38c0-4 1-6 2-8z" fill="currentColor" fill-opacity=".14"/><path d="M60 91q3-3 6 0t6 0t6 0"/><g transform="translate(77 79) rotate(172) scale(1.2) translate(-39 -20)"><use href="#syringe" width="40" height="40"/></g></svg><img class="art-img" alt="" hidden>
       <h2>Thoracentesis</h2><p><span data-i18n="d1a">การระบายของเหลวในช่องเยื่อหุ้มปอด</span><span data-i18n="d1b">และการใส่ท่อระบายทรวงอก</span></p><button type="button" class="go" data-i18n="go">Start Modules →</button>
     </label>
-    <label class="mod" data-proc="paracentesis"><input type="radio" name="proc" value="paracentesis">
+    <label class="mod soon" data-proc="paracentesis" aria-disabled="true" title="Coming soon" data-i18n-title="cSoon"><input type="radio" name="proc" value="paracentesis" disabled>
       <span class="lvl" data-i18n="lvlAdv">Advanced</span>
       <svg class="art" viewBox="0 0 130 104" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M28 6c4 22 2 46-4 70 16 16 44 16 60 0-6-24-8-48-4-70z" fill="currentColor" fill-opacity=".1" stroke="none"/><path d="M28 6c4 22 2 46-4 70 16 16 44 16 60 0 -6-24-8-48-4-70"/><circle cx="54" cy="46" r="2"/><path d="M38 66q4-4 8 0t8 0t8 0M42 75q4-4 8 0t8 0t8 0"/><g transform="translate(66 60) rotate(200) scale(1.2) translate(-39 -20)"><use href="#syringe" width="40" height="40"/></g></svg><img class="art-img" alt="" hidden>
-      <h2>Paracentesis</h2><p><span data-i18n="d2a">การเจาะดูดน้ำในช่องท้อง</span><span data-i18n="d2b">และการเตรียมผู้ป่วย</span></p><button type="button" class="go" data-i18n="go">Start Modules →</button>
+      <h2>Paracentesis</h2><p><span data-i18n="d2a">การเจาะดูดน้ำในช่องท้อง</span><span data-i18n="d2b">และการเตรียมผู้ป่วย</span></p><button type="button" class="go" data-i18n="cSoon" disabled>Coming soon</button>
     </label>
-    <label class="mod" data-proc="pericardiocentesis"><input type="radio" name="proc" value="pericardiocentesis">
+    <label class="mod soon" data-proc="pericardiocentesis" aria-disabled="true" title="Coming soon" data-i18n-title="cSoon"><input type="radio" name="proc" value="pericardiocentesis" disabled>
       <span class="lvl" data-i18n="lvlAdv">Advanced</span>
       <svg class="art" viewBox="0 0 130 104" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M54 94C20 70 10 50 15 32 20 14 42 12 54 28 66 12 88 14 93 32c5 18-5 38-39 62z" stroke-dasharray="4 4" opacity=".85"/><path d="M54 88C26 66 18 50 22 36 26 22 44 20 54 34 64 20 82 22 86 36c4 14-4 30-32 52z" fill="currentColor" fill-opacity=".14"/><path d="M48 28V18M60 28V18"/><g transform="translate(66.5 81) rotate(200) scale(1.2) translate(-39 -20)"><use href="#syringe" width="40" height="40"/></g></svg><img class="art-img" alt="" hidden>
-      <h2>Pericardiocentesis</h2><p><span data-i18n="d3a">การเจาะดูดน้ำในเยื่อหุ้มหัวใจ</span><span data-i18n="d3b">และการวางตำแหน่งเข็ม</span></p><button type="button" class="go" data-i18n="go">Start Modules →</button>
+      <h2>Pericardiocentesis</h2><p><span data-i18n="d3a">การเจาะดูดน้ำในเยื่อหุ้มหัวใจ</span><span data-i18n="d3b">และการวางตำแหน่งเข็ม</span></p><button type="button" class="go" data-i18n="cSoon" disabled>Coming soon</button>
     </label>
   </div>
 </main>
@@ -546,7 +590,7 @@ $('cancel').addEventListener('click', () => {
 render();
 // ---- Settings: language + theme (saved in this browser) ----
 const I18N = {
- en:{home:'Home',dash:'Dashboard',hist:'History',mods:'Modules',sett:'Settings',prof:'Student Profile',soon:'Not available yet',
+ en:{cSoon:'Coming soon',aSub:'Your history and progress are saved to your own account',aUser:'Username',aPass:'Password',aPass2:'Confirm password',aLogin:'Sign in',aReg:'Create account',aToReg:'No account? Create one',aToLogin:'Already have an account? Sign in',aLogout:'Sign out',aAs:'Signed in as',aBad:'Wrong username or password',aTaken:'This username is already taken',aLocked:'Too many wrong attempts. Wait a moment and try again',aUserErr:'Username: 3–32 characters, only letters, numbers, _ . -',aPassErr:'Password must be at least 6 characters',aMismatch:'Passwords do not match',aExpired:'Session expired, please sign in again',aWait:'Connecting to the backend…',aBusy:'Please wait…',home:'Home',dash:'Dashboard',hist:'History',mods:'Modules',sett:'Settings',prof:'Student Profile',soon:'Not available yet',
   dTitle:'Select Training Modules',dSub:'Select a procedure, then press Start Modules',lvlMid:'Intermediate',lvlAdv:'Advanced',go:'Start Modules →',
   d1a:'Pleural space drainage',d1b:'and chest tube insertion',d2a:'Peritoneal fluid aspiration',d2b:'and patient prep',d3a:'Pericardial fluid aspiration',d3b:'and needle placement',
   crumb:'› Simulation setup',crumbT:'Simulation Setup',cfg:'Case configuration',age:'Patient age',ped:'Pediatric',adu:'Adult',ger:'Geriatric',
@@ -558,7 +602,7 @@ const I18N = {
   thMode:'Training mode',thScore:'Score',thAct:'Actions',demo:'Sample data, for layout preview only',pass:'Pass: score ≥',noData:'No data yet',
   emptyRows:'No training sessions yet. Completed sessions will appear here.',week:'Week',view:'View',viewT:'Session details are not built yet',mU:'m',sU:'s',
   sTitle:'Settings',sTheme:'Appearance',thSys:'Use device setting',thLight:'Light',thDark:'Dark',thHint:'Use device setting follows your computer’s light or dark mode.',sLang:'Language',eTitle:'Encoder & mechanism monitor',eHint:'Needs the FastAPI backend (main.py). Only one program can open the serial port, so close serial_bridge or the debugger before connecting. Set Zero while the needle is parallel to the ground; it is saved immediately.',ePort:'Port',eNoBytes:'Nothing received from this port. Check that it is the STM32’s port (not another COM), the baud rate is 230400, and the firmware is sending.',eBadLines:'Receiving lines but cannot read them (expected timestamp;enc1;enc2;enc3). Last line:',eLost:'Data stopped arriving. Check the cable and the board.',ePortPick:'Select port',eNoPort:'No serial port found',ePortRefresh:'Refresh ports',ePortNone:'Select a port first',eConnect:'Connect',eDisc:'Disconnect',eConnecting:'Connecting…',eOn:'Connected',eStale:'Connected, no data yet',eOff:'Not connected',eApiErr:'Cannot reach the backend (is main.py running on :8000?)',eJoint:'Joint',eEnc:'Encoder',eAct:'Action',eLive:'Live net (raw)',eZero:'Set Zero',eSave:'Save encoder settings',eSaved:'Encoder settings saved',eZeroed:'Zeroed at',ePprErr:'PPR must be a whole number, 1 or more',eYaw:'Yaw (Z)',ePitch:'Pitch (Y)',eSlider:'Slider',eIso:'Isometric',eTop:'Top (XY)',eSide:'Side (XZ)',simTitle:'Simulation',simExit:'Exit',simPerf:'Performance & Suggestions',simAngle:'Insert angle score',simTilt:'Tilt from perpendicular',simDepth:'Needle depth',simReset:'Reset attempt',simIdle:'Hold the needle perpendicular to the skin',simAligned:'Perpendicular – ready to insert',simIn:'Inserting…',simOk:'Success – needle in the pleural space',simFail:'Failed – needle hit the lung',simOff:'Encoder not streaming: connect it in Settings',simApi:'Cannot reach the backend (main.py :8000)',simSaved:'Result saved to History',simSaveErr:'Could not save the result',tbTitle:'Toolbar',tPointer:'Pointer',tOrbit:'Camera Orbit',tZoom:'Zoom',tNeedle:'Needle',tLayers:'Layers',tMeasure:'Measure',tZone:'Highlight',tUndo:'Undo',tRedo:'Redo',lSkin:'Skin',lRibs:'Ribs',lLungs:'Lungs',setTitle:'Settings',sSfx:'SFX On/Off',sFf:'Force Feedback',sDiff:'Difficulty',dEasy:'Easy',dMed:'Medium',dHard:'Hard',mPleura:'to pleura',mLung:'to lung',simNo3d:'3D view needs three.js (internet connection to cdnjs.cloudflare.com)',simOffSite:'Choose the puncture point in the 4th–6th intercostal space, anterior to the mid-axillary line (press Highlight to see the zone)',simWrongSite:'Failed – wrong site (use the 4th–6th intercostal space, anterior to the mid-axillary line)',simPickHint:'Pointer: click in the 4th–6th intercostal space, anterior to the mid-axillary line (press Highlight to see the zone)',rateLbl:'Success Rate',accLbl:'Session accuracy',simHist:'History & Analytics',spGood:'Steady',spPractice:'Needs practice',simLungLbl:'Avoid lung',simSpeedLbl:'Steady insertion speed',simFromLast:'from last attempt'},
- th:{home:'หน้าแรก',dash:'แดชบอร์ด',hist:'ประวัติ',mods:'โมดูล',sett:'การตั้งค่า',prof:'โปรไฟล์ผู้เรียน',soon:'ยังไม่เปิดให้ใช้งาน',
+ th:{cSoon:'เร็วๆ นี้',aSub:'ประวัติและพัฒนาการของคุณจะถูกเก็บไว้ในบัญชีของคุณเอง',aUser:'ชื่อผู้ใช้',aPass:'รหัสผ่าน',aPass2:'ยืนยันรหัสผ่าน',aLogin:'เข้าสู่ระบบ',aReg:'สมัครสมาชิก',aToReg:'ยังไม่มีบัญชี? สมัครสมาชิก',aToLogin:'มีบัญชีแล้ว? เข้าสู่ระบบ',aLogout:'ออกจากระบบ',aAs:'เข้าสู่ระบบเป็น',aBad:'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',aTaken:'ชื่อผู้ใช้นี้ถูกใช้แล้ว',aLocked:'ใส่รหัสผ่านผิดหลายครั้ง รอสักครู่แล้วลองใหม่',aUserErr:'ชื่อผู้ใช้ 3–32 ตัว ใช้ได้เฉพาะ a-z 0-9 _ . -',aPassErr:'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',aMismatch:'รหัสผ่านไม่ตรงกัน',aExpired:'หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบอีกครั้ง',aWait:'กำลังเชื่อมต่อ backend…',aBusy:'กรุณารอสักครู่…',home:'หน้าแรก',dash:'แดชบอร์ด',hist:'ประวัติ',mods:'โมดูล',sett:'การตั้งค่า',prof:'โปรไฟล์ผู้เรียน',soon:'ยังไม่เปิดให้ใช้งาน',
   dTitle:'เลือกโมดูลการฝึก',dSub:'เลือกหัตถการ แล้วกดปุ่ม “เริ่มโมดูล”',lvlMid:'ระดับกลาง',lvlAdv:'ระดับสูง',go:'เริ่มโมดูล →',
   d1a:'การระบายของเหลวในช่องเยื่อหุ้มปอด',d1b:'และการใส่ท่อระบายทรวงอก',d2a:'การเจาะดูดน้ำในช่องท้อง',d2b:'และการเตรียมผู้ป่วย',d3a:'การเจาะดูดน้ำในเยื่อหุ้มหัวใจ',d3b:'และการวางตำแหน่งเข็ม',
   crumb:'› ตั้งค่าการจำลอง',crumbT:'ตั้งค่าการจำลอง',cfg:'ตั้งค่าเคส',age:'อายุผู้ป่วย',ped:'เด็ก',adu:'ผู้ใหญ่',ger:'ผู้สูงอายุ',
@@ -622,14 +666,26 @@ function encMsg(text, kind){
   clearTimeout(encMsgTimer);
   if (text) encMsgTimer = setTimeout(() => { el.textContent = ''; }, 4000);
 }
+// ---- Login: บัญชีผู้ใช้ (ประวัติแยกตามผู้ใช้) ----
+let authToken = null, authUser = null, authMode = 'login', authBusy = false;
+try { authToken = localStorage.getItem('sim.token'); authUser = localStorage.getItem('sim.user'); } catch (e) {}
+
 async function encApi(path, method, body){
+  const headers = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
   const res = await fetch(API_BASE + path, {
     method: method || 'GET',
-    headers: body ? {'Content-Type': 'application/json'} : undefined,
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'HTTP ' + res.status);
+  if (res.status === 401 && authToken && !path.startsWith('/auth/')) authExpired();   // token หมดอายุ/ถูกเพิกถอน
+  if (!res.ok) {
+    const err = new Error(typeof data.detail === 'string' ? data.detail : 'HTTP ' + res.status);
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
 function encForm(){
@@ -1257,11 +1313,13 @@ $('exportPdf').addEventListener('click', () => window.print());
 
 // Dashboard / setup routing: #thoracentesis, #paracentesis, #pericardiocentesis open the setup page
 const PROCS = {thoracentesis:'Thoracentesis', paracentesis:'Paracentesis', pericardiocentesis:'Pericardiocentesis'};
+const AVAILABLE = ['thoracentesis'];   // หัตถการที่เปิดใช้แล้ว (ที่เหลือเป็น Coming soon): เพิ่มชื่อที่นี่เมื่อทำเสร็จ แล้วเอา class "soon"/disabled ออกจากการ์ด
 let proc = null;
 let simProc = null;
 function route(){
+  authRender();
   const key = location.hash.slice(1);
-  proc = PROCS[key] ? key : null;
+  proc = AVAILABLE.includes(key) ? key : null;
   const view = proc ? 'setup' : key === 'simulation' ? 'sim' : key.startsWith('history') ? 'history' : key === 'settings' ? 'settings' : 'dash';
   $('view-dash').hidden = view !== 'dash';
   $('view-setup').hidden = view !== 'setup';
@@ -1283,7 +1341,104 @@ function route(){
   window.scrollTo(0, 0);
 }
 window.addEventListener('hashchange', route);
+
+// ---- Login UI ----
+function authStore(){
+  try {
+    if (authToken) { localStorage.setItem('sim.token', authToken); localStorage.setItem('sim.user', authUser || ''); }
+    else { localStorage.removeItem('sim.token'); localStorage.removeItem('sim.user'); }
+  } catch (e) {}
+}
+let authMsgK = '', authMsgRaw = '';   // เก็บเป็นคีย์ i18n เพื่อให้ข้อความเปลี่ยนภาษาตามเมื่อสลับ
+function authMsg(key, raw){ authMsgK = key || ''; authMsgRaw = raw || ''; $('aMsg').textContent = authMsgK ? t(authMsgK) : authMsgRaw; }
+function authRender(){
+  const reg = authMode === 'reg';
+  $('authTitle').textContent = t(reg ? 'aReg' : 'aLogin');
+  $('aGo').textContent = t(reg ? 'aReg' : 'aLogin');
+  $('aSwitch').textContent = t(reg ? 'aToLogin' : 'aToReg');
+  $('aPass2Row').hidden = !reg;
+  $('aPass').autocomplete = reg ? 'new-password' : 'current-password';
+  $('aLang').textContent = prefs.lang === 'th' ? 'EN' : 'ไทย';
+  $('profName').textContent = authToken && authUser ? authUser : t('prof');
+  $('pmUser').textContent = authUser || '';
+  $('aMsg').textContent = authMsgK ? t(authMsgK) : authMsgRaw;
+}
+function authShow(msg, mode){
+  if (mode) authMode = mode;   // เปิดหน้าล็อกอินใหม่เป็นโหมด "เข้าสู่ระบบ" เสมอ (ยกเว้นระบุเป็นอย่างอื่น)
+  $('pmenu').hidden = true;
+  $('auth').hidden = false;
+  authMsg(msg);
+  authRender();
+  setTimeout(() => $('aUser').focus(), 0);
+}
+function authReset(){   // ล้างข้อมูลของผู้ใช้คนก่อนออกจากหน้าจอ (ประวัติ/คะแนนรอบนี้)
+  historyData = [];
+  simSession = [];
+  $('pmenu').hidden = true;
+  refreshHistory();
+  authRender();
+}
+function authExpired(){
+  authToken = authUser = null;
+  authStore(); authReset();
+  authShow('aExpired', 'login');
+}
+$('authForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (authBusy) return;
+  const username = $('aUser').value.trim(), password = $('aPass').value, reg = authMode === 'reg';
+  if (reg) {
+    if (!/^[A-Za-z0-9_.-]{3,32}$/.test(username)) return authMsg('aUserErr');
+    if (password.length < 6) return authMsg('aPassErr');
+    if (password !== $('aPass2').value) return authMsg('aMismatch');
+  } else if (!username || !password) return authMsg('aBad');
+  authBusy = true; $('aGo').disabled = true; authMsg('aBusy');
+  try {
+    const r = await encApi(reg ? '/auth/register' : '/auth/login', 'POST', {username, password});
+    authToken = r.token; authUser = r.username; authStore();
+    $('aPass').value = $('aPass2').value = '';
+    authMsg(''); $('auth').hidden = true; authMode = 'login';
+    authReset(); histLoad();
+  } catch (err) {
+    authMsg(err.status === 401 ? 'aBad' : err.status === 409 ? 'aTaken' : err.status === 429 ? 'aLocked'
+      : err.status ? '' : 'eApiErr', err.message);
+  } finally { authBusy = false; $('aGo').disabled = false; }
+});
+$('aSwitch').addEventListener('click', () => { authMode = authMode === 'reg' ? 'login' : 'reg'; authMsg(''); authRender(); });
+$('aLang').addEventListener('click', () => {
+  prefs.lang = prefs.lang === 'th' ? 'en' : 'th';
+  try { localStorage.setItem('sim.lang', prefs.lang); } catch (e) {}
+  syncSettings(); applyLang(); route();
+});
+function pmToggle(){ if (authToken) $('pmenu').hidden = !$('pmenu').hidden; }
+$('profile').addEventListener('click', e => { e.stopPropagation(); pmToggle(); });
+$('profile').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pmToggle(); } });
+document.addEventListener('click', e => { if (!$('pmenu').contains(e.target)) $('pmenu').hidden = true; });
+$('pmOut').addEventListener('click', async () => {
+  try { await encApi('/auth/logout', 'POST', {}); } catch (e) {}
+  authToken = authUser = null; authStore(); authReset();
+  location.hash = '#dashboard';
+  authShow('', 'login');
+});
+async function authInit(){   // ตรวจ token ที่เก็บไว้ (รอ backend เปิดสูงสุด ~30 วินาที เผื่อแอปเดสก์ท็อปเพิ่งสตาร์ต)
+  if (!authToken) { authShow(''); return; }
+  for (let i = 0; i < 20 && authToken; i++) {
+    try {
+      const me = await encApi('/auth/me');
+      authUser = me.username; authStore();
+      $('auth').hidden = true; authMsg(''); authRender(); histLoad();
+      return;
+    } catch (e) {
+      if (e.status) return;          // 401: encApi เรียก authExpired แล้ว (แสดงหน้าล็อกอิน)
+      authShow('aWait');          // ยังต่อ backend ไม่ได้: รอแล้วลองใหม่
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+  if (authToken) authShow('eApiErr');
+}
+
 route();
+authInit();
 
 // Step 1: click a card to select it. Step 2: press its Start Modules button to continue.
 const mods = document.querySelectorAll('.mod');
@@ -1293,6 +1448,7 @@ function pick(el){
   mods.forEach(m => { m.classList.toggle('sel', m === el); m.querySelector('input').checked = (m === el); });
 }
 mods.forEach(m => {
+  if (m.classList.contains('soon')) return;   // ยังไม่เปิดให้ใช้
   m.querySelector('input').addEventListener('change', () => pick(m));
   m.querySelector('.go').addEventListener('click', e => {
     e.preventDefault(); e.stopPropagation();

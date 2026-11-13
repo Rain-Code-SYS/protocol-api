@@ -12,6 +12,6 @@
     "Slider_MOTOR": {
         "encoder_id": "Enc_3",
         "ppr": 4096,
-        "offset": 0
+        "offset": 667
     }
 }

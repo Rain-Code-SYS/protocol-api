@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
 from typing import Dict, List, Literal, Optional
@@ -8,6 +8,7 @@ import os
 from protocol_sdk.client import ProtocolClient
 import threading
 
+from auth_service import AuthError, AuthService
 from encoder_service import EncoderService, list_serial_ports
 from tissue_model import TissueResistanceModel
 
@@ -81,6 +82,9 @@ sessions_db: List[dict] = load_sessions()
 
 # ใช้ SDK สำหรับ decode/encode โดยอ่าน Schema จาก protocols_db ในหน่วยความจำ (ไม่ยิง HTTP กลับมาที่ตัวเอง)
 sdk_client = ProtocolClient()
+
+# บัญชีผู้ใช้ (ล็อกอิน) เก็บใน users.json: ประวัติ /attempts แยกตามผู้ใช้
+auth = AuthService()
 
 # อ่านเอนโค้ดเดอร์ + config สำหรับหน้า Settings (ไม่เปิดพอร์ตเองจนกว่าจะเรียก /encoder/connect)
 encoder_service = EncoderService()
@@ -293,6 +297,48 @@ def encoder_disconnect():
     encoder_service.disconnect()
     return {"ok": True}
 
+# =========================================================================
+# บัญชีผู้ใช้: สมัคร / ล็อกอิน / ออกจากระบบ (ใช้ Bearer token ใน header Authorization)
+# =========================================================================
+class Credentials(BaseModel):
+    username: str = Field(max_length=64)
+    password: str = Field(max_length=256)
+
+def _bearer(authorization: Optional[str]) -> Optional[str]:
+    if authorization and authorization.lower().startswith("bearer "):
+        return authorization[7:].strip()
+    return None
+
+def current_user(authorization: Optional[str] = Header(default=None)) -> str:
+    """dependency: คืนคีย์ผู้ใช้จาก token ไม่งั้นตอบ 401"""
+    user = auth.verify(_bearer(authorization))
+    if user is None:
+        raise HTTPException(status_code=401, detail="กรุณาเข้าสู่ระบบ")
+    return user
+
+@app.post("/auth/register")
+def auth_register(body: Credentials):
+    try:
+        return auth.register(body.username, body.password)
+    except AuthError as err:
+        raise HTTPException(status_code=err.status, detail=str(err))
+
+@app.post("/auth/login")
+def auth_login(body: Credentials):
+    try:
+        return auth.login(body.username, body.password)
+    except AuthError as err:
+        raise HTTPException(status_code=err.status, detail=str(err))
+
+@app.post("/auth/logout")
+def auth_logout(authorization: Optional[str] = Header(default=None)):
+    auth.logout(_bearer(authorization))
+    return {"ok": True}
+
+@app.get("/auth/me")
+def auth_me(user: str = Depends(current_user)):
+    return {"username": auth.display_name(user)}
+
 class AttemptIn(BaseModel):
     date: int                                   # epoch ms
     procedure: str
@@ -308,14 +354,15 @@ class AttemptIn(BaseModel):
     force_feedback: bool = False
 
 @app.post("/attempts")
-def save_attempt(body: AttemptIn):
-    attempts_db.append(body.model_dump())
+def save_attempt(body: AttemptIn, user: str = Depends(current_user)):
+    attempts_db.append({**body.model_dump(), "user": user})  # ผูกผลกับเจ้าของบัญชี
     save_attempts(attempts_db)
-    return {"ok": True, "count": len(attempts_db)}
+    return {"ok": True, "count": sum(1 for a in attempts_db if a.get("user") == user)}
 
 @app.get("/attempts")
-def list_attempts():
-    return attempts_db
+def list_attempts(user: str = Depends(current_user)):
+    """ส่งเฉพาะผลของผู้ใช้ที่ล็อกอินอยู่ (ผลเก่าที่ไม่มีเจ้าของจะไม่ถูกส่งให้ใคร)"""
+    return [{k: v for k, v in a.items() if k != "user"} for a in attempts_db if a.get("user") == user]
 
 @app.get("/simulation/pose")
 def simulation_pose():
