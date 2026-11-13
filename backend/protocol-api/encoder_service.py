@@ -64,14 +64,19 @@ class EncoderService:
 
     # ---------- config ----------
     def _load(self) -> Dict[str, Dict[str, Any]]:
-        cfg = copy.deepcopy(DEFAULT_CONFIG)
         if not os.path.exists(self.config_file):
-            return cfg
+            return self._merge_config(None)
         try:
             with open(self.config_file, "r", encoding="utf-8") as f:
                 loaded = json.load(f)
         except (OSError, json.JSONDecodeError):
-            return cfg
+            loaded = None
+        return self._merge_config(loaded)
+
+    @staticmethod
+    def _merge_config(loaded: Any) -> Dict[str, Dict[str, Any]]:
+        """ค่าตั้งต้น + ค่าที่โหลดมา (เก็บเฉพาะค่าที่ผ่านการตรวจ) ใช้ร่วมกับเวอร์ชันเก็บใน DB ต่อผู้ใช้"""
+        cfg = copy.deepcopy(DEFAULT_CONFIG)
         if not isinstance(loaded, dict):
             return cfg
         for key, item in cfg.items():

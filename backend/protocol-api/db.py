@@ -30,6 +30,10 @@ SCHEMA = [
         data TEXT NOT NULL
     )""",
     "CREATE INDEX IF NOT EXISTS attempts_user_idx ON attempts(user_id, id)",
+    """CREATE TABLE IF NOT EXISTS encoder_configs (
+        user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        data TEXT NOT NULL
+    )""",
 ]
 
 
@@ -112,5 +116,5 @@ class Database:
 
     def wipe_users(self) -> None:
         """ลบบัญชี/session/ประวัติทั้งหมด (ใช้ตอนรีเซ็ตบัญชีเก่า)"""
-        for table in ("attempts", "sessions", "users"):
+        for table in ("attempts", "encoder_configs", "sessions", "users"):
             self.execute(f"DELETE FROM {table}")

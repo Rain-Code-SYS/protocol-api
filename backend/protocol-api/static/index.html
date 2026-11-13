@@ -517,6 +517,7 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
       <button type="button" class="mini pri" id="encConn" data-i18n="eConnect">Connect</button>
     </div>
     <p class="sett-hint" id="encDiag" role="status" hidden></p>
+    <p class="sett-hint" id="encWs" role="status" hidden></p>
     <p class="sett-hint" data-i18n="eHint"></p>
     <div class="tbl-wrap"><table>
       <thead><tr><th data-i18n="eJoint">Joint</th><th data-i18n="eEnc">Encoder</th><th>PPR</th><th data-i18n="eAct">Action</th><th data-i18n="eLive">Live net (raw)</th></tr></thead>
@@ -532,6 +533,7 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="/static/haptic_model.js"></script>
 <script>
 // Trig Protocol (1): INT, bit layout 0b AA DD C MM  (Age | Difficulty | Case | Mode)
 const ORDER = ['age','diff','kase','mode'];
@@ -592,7 +594,7 @@ $('cancel').addEventListener('click', () => {
 render();
 // ---- Settings: language + theme (saved in this browser) ----
 const I18N = {
- en:{cSoon:'Coming soon',aSub:'Your history and progress are saved to your own account',aEmail:'Email',aLoginId:'Email or username',aEmailErr:'Please enter a valid email address',aEmailTaken:'This email is already registered. Please sign in instead',aUser:'Username (display name)',aPass:'Password',aPass2:'Confirm password',aLogin:'Sign in',aReg:'Create account',aToReg:'No account? Create one',aToLogin:'Already have an account? Sign in',aLogout:'Sign out',aAs:'Signed in as',aBad:'Wrong email/username or password',aTaken:'This username is already taken. Please choose another',aLocked:'Too many wrong attempts. Wait a moment and try again',aUserErr:'Username: 3–32 characters, only letters, numbers, _ . -',aPassErr:'Password must be at least 6 characters',aMismatch:'Passwords do not match',aExpired:'Session expired, please sign in again',aWait:'Connecting to the backend…',aBusy:'Please wait…',home:'Home',dash:'Dashboard',hist:'History',mods:'Modules',sett:'Settings',prof:'Student Profile',soon:'Not available yet',
+ en:{cSoon:'Coming soon',aSub:'Your history and progress are saved to your own account',eNoWebSerial:'This browser cannot read the board over USB. Use Chrome or Edge on a computer (the site must be HTTPS or localhost).',eWsOpenErr:'Could not open the port (is another program using it?)',eWsLost:'The USB connection was lost',simFfOn:'Force feedback on',simFfNeed:'Force feedback needs the board connected in Settings',aEmail:'Email',aLoginId:'Email or username',aEmailErr:'Please enter a valid email address',aEmailTaken:'This email is already registered. Please sign in instead',aUser:'Username (display name)',aPass:'Password',aPass2:'Confirm password',aLogin:'Sign in',aReg:'Create account',aToReg:'No account? Create one',aToLogin:'Already have an account? Sign in',aLogout:'Sign out',aAs:'Signed in as',aBad:'Wrong email/username or password',aTaken:'This username is already taken. Please choose another',aLocked:'Too many wrong attempts. Wait a moment and try again',aUserErr:'Username: 3–32 characters, only letters, numbers, _ . -',aPassErr:'Password must be at least 6 characters',aMismatch:'Passwords do not match',aExpired:'Session expired, please sign in again',aWait:'Connecting to the backend…',aBusy:'Please wait…',home:'Home',dash:'Dashboard',hist:'History',mods:'Modules',sett:'Settings',prof:'Student Profile',soon:'Not available yet',
   dTitle:'Select Training Modules',dSub:'Select a procedure, then press Start Modules',lvlMid:'Intermediate',lvlAdv:'Advanced',go:'Start Modules →',
   d1a:'Pleural space drainage',d1b:'and chest tube insertion',d2a:'Peritoneal fluid aspiration',d2b:'and patient prep',d3a:'Pericardial fluid aspiration',d3b:'and needle placement',
   crumb:'› Simulation setup',crumbT:'Simulation Setup',cfg:'Case configuration',age:'Patient age',ped:'Pediatric',adu:'Adult',ger:'Geriatric',
@@ -604,7 +606,7 @@ const I18N = {
   thMode:'Training mode',thScore:'Score',thAct:'Actions',demo:'Sample data, for layout preview only',pass:'Pass: score ≥',noData:'No data yet',
   emptyRows:'No training sessions yet. Completed sessions will appear here.',week:'Week',view:'View',viewT:'Session details are not built yet',mU:'m',sU:'s',
   sTitle:'Settings',sTheme:'Appearance',thSys:'Use device setting',thLight:'Light',thDark:'Dark',thHint:'Use device setting follows your computer’s light or dark mode.',sLang:'Language',eTitle:'Encoder & mechanism monitor',eHint:'Needs the FastAPI backend (main.py). Only one program can open the serial port, so close serial_bridge or the debugger before connecting. Set Zero while the needle is parallel to the ground; it is saved immediately.',ePort:'Port',eNoBytes:'Nothing received from this port. Check that it is the STM32’s port (not another COM), the baud rate is 230400, and the firmware is sending.',eBadLines:'Receiving lines but cannot read them (expected timestamp;enc1;enc2;enc3). Last line:',eLost:'Data stopped arriving. Check the cable and the board.',ePortPick:'Select port',eNoPort:'No serial port found',ePortRefresh:'Refresh ports',ePortNone:'Select a port first',eConnect:'Connect',eDisc:'Disconnect',eConnecting:'Connecting…',eOn:'Connected',eStale:'Connected, no data yet',eOff:'Not connected',eApiErr:'Cannot reach the backend (is main.py running on :8000?)',eJoint:'Joint',eEnc:'Encoder',eAct:'Action',eLive:'Live net (raw)',eZero:'Set Zero',eSave:'Save encoder settings',eSaved:'Encoder settings saved',eZeroed:'Zeroed at',ePprErr:'PPR must be a whole number, 1 or more',eYaw:'Yaw (Z)',ePitch:'Pitch (Y)',eSlider:'Slider',eIso:'Isometric',eTop:'Top (XY)',eSide:'Side (XZ)',simTitle:'Simulation',simExit:'Exit',simPerf:'Performance & Suggestions',simAngle:'Insert angle score',simTilt:'Tilt from perpendicular',simDepth:'Needle depth',simReset:'Reset attempt',simIdle:'Hold the needle perpendicular to the skin',simAligned:'Perpendicular – ready to insert',simIn:'Inserting…',simOk:'Success – needle in the pleural space',simFail:'Failed – needle hit the lung',simOff:'Encoder not streaming: connect it in Settings',simApi:'Cannot reach the backend (main.py :8000)',simSaved:'Result saved to History',simSaveErr:'Could not save the result',tbTitle:'Toolbar',tPointer:'Pointer',tOrbit:'Camera Orbit',tZoom:'Zoom',tNeedle:'Needle',tLayers:'Layers',tMeasure:'Measure',tZone:'Highlight',tUndo:'Undo',tRedo:'Redo',lSkin:'Skin',lRibs:'Ribs',lLungs:'Lungs',setTitle:'Settings',sSfx:'SFX On/Off',sFf:'Force Feedback',sDiff:'Difficulty',dEasy:'Easy',dMed:'Medium',dHard:'Hard',mPleura:'to pleura',mLung:'to lung',simNo3d:'3D view needs three.js (internet connection to cdnjs.cloudflare.com)',simOffSite:'Choose the puncture point in the 4th–6th intercostal space, anterior to the mid-axillary line (press Highlight to see the zone)',simWrongSite:'Failed – wrong site (use the 4th–6th intercostal space, anterior to the mid-axillary line)',simPickHint:'Pointer: click anywhere on the chest to choose the puncture point (press Highlight to see the correct zone \u2013 other points will fail)',rateLbl:'Success Rate',accLbl:'Session accuracy',simHist:'History & Analytics',spGood:'Steady',spPractice:'Needs practice',simLungLbl:'Avoid lung',simSpeedLbl:'Steady insertion speed',simFromLast:'from last attempt'},
- th:{cSoon:'เร็วๆ นี้',aSub:'ประวัติและพัฒนาการของคุณจะถูกเก็บไว้ในบัญชีของคุณเอง',aEmail:'อีเมล',aLoginId:'อีเมลหรือชื่อผู้ใช้',aEmailErr:'กรุณากรอกอีเมลให้ถูกต้อง',aEmailTaken:'อีเมลนี้สมัครไว้แล้ว กรุณาเข้าสู่ระบบแทน',aUser:'ชื่อผู้ใช้ (ชื่อที่แสดง)',aPass:'รหัสผ่าน',aPass2:'ยืนยันรหัสผ่าน',aLogin:'เข้าสู่ระบบ',aReg:'สมัครสมาชิก',aToReg:'ยังไม่มีบัญชี? สมัครสมาชิก',aToLogin:'มีบัญชีแล้ว? เข้าสู่ระบบ',aLogout:'ออกจากระบบ',aAs:'เข้าสู่ระบบเป็น',aBad:'อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง',aTaken:'ชื่อผู้ใช้นี้ถูกใช้แล้ว กรุณาเลือกชื่ออื่น',aLocked:'ใส่รหัสผ่านผิดหลายครั้ง รอสักครู่แล้วลองใหม่',aUserErr:'ชื่อผู้ใช้ 3–32 ตัว ใช้ได้เฉพาะ a-z 0-9 _ . -',aPassErr:'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',aMismatch:'รหัสผ่านไม่ตรงกัน',aExpired:'หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบอีกครั้ง',aWait:'กำลังเชื่อมต่อ backend…',aBusy:'กรุณารอสักครู่…',home:'หน้าแรก',dash:'แดชบอร์ด',hist:'ประวัติ',mods:'โมดูล',sett:'การตั้งค่า',prof:'โปรไฟล์ผู้เรียน',soon:'ยังไม่เปิดให้ใช้งาน',
+ th:{cSoon:'เร็วๆ นี้',aSub:'ประวัติและพัฒนาการของคุณจะถูกเก็บไว้ในบัญชีของคุณเอง',eNoWebSerial:'เบราว์เซอร์นี้อ่านบอร์ดผ่าน USB ไม่ได้ กรุณาใช้ Chrome หรือ Edge บนคอมพิวเตอร์ (เว็บต้องเป็น HTTPS หรือ localhost)',eWsOpenErr:'เปิดพอร์ตไม่ได้ (อาจมีโปรแกรมอื่นใช้อยู่)',eWsLost:'การเชื่อมต่อ USB หลุด',simFfOn:'แรงสะท้อนกลับทำงาน',simFfNeed:'แรงสะท้อนกลับต้องเชื่อมต่อบอร์ดที่ Settings ก่อน',aEmail:'อีเมล',aLoginId:'อีเมลหรือชื่อผู้ใช้',aEmailErr:'กรุณากรอกอีเมลให้ถูกต้อง',aEmailTaken:'อีเมลนี้สมัครไว้แล้ว กรุณาเข้าสู่ระบบแทน',aUser:'ชื่อผู้ใช้ (ชื่อที่แสดง)',aPass:'รหัสผ่าน',aPass2:'ยืนยันรหัสผ่าน',aLogin:'เข้าสู่ระบบ',aReg:'สมัครสมาชิก',aToReg:'ยังไม่มีบัญชี? สมัครสมาชิก',aToLogin:'มีบัญชีแล้ว? เข้าสู่ระบบ',aLogout:'ออกจากระบบ',aAs:'เข้าสู่ระบบเป็น',aBad:'อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง',aTaken:'ชื่อผู้ใช้นี้ถูกใช้แล้ว กรุณาเลือกชื่ออื่น',aLocked:'ใส่รหัสผ่านผิดหลายครั้ง รอสักครู่แล้วลองใหม่',aUserErr:'ชื่อผู้ใช้ 3–32 ตัว ใช้ได้เฉพาะ a-z 0-9 _ . -',aPassErr:'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',aMismatch:'รหัสผ่านไม่ตรงกัน',aExpired:'หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบอีกครั้ง',aWait:'กำลังเชื่อมต่อ backend…',aBusy:'กรุณารอสักครู่…',home:'หน้าแรก',dash:'แดชบอร์ด',hist:'ประวัติ',mods:'โมดูล',sett:'การตั้งค่า',prof:'โปรไฟล์ผู้เรียน',soon:'ยังไม่เปิดให้ใช้งาน',
   dTitle:'เลือกโมดูลการฝึก',dSub:'เลือกหัตถการ แล้วกดปุ่ม “เริ่มโมดูล”',lvlMid:'ระดับกลาง',lvlAdv:'ระดับสูง',go:'เริ่มโมดูล →',
   d1a:'การระบายของเหลวในช่องเยื่อหุ้มปอด',d1b:'และการใส่ท่อระบายทรวงอก',d2a:'การเจาะดูดน้ำในช่องท้อง',d2b:'และการเตรียมผู้ป่วย',d3a:'การเจาะดูดน้ำในเยื่อหุ้มหัวใจ',d3b:'และการวางตำแหน่งเข็ม',
   crumb:'› ตั้งค่าการจำลอง',crumbT:'ตั้งค่าการจำลอง',cfg:'ตั้งค่าเคส',age:'อายุผู้ป่วย',ped:'เด็ก',adu:'ผู้ใหญ่',ger:'ผู้สูงอายุ',
@@ -700,12 +702,12 @@ function encForm(){
 async function encSave(){
   const body = encForm();
   for (const k in body) if (!Number.isInteger(body[k].ppr) || body[k].ppr < 1) { encMsg(t('ePprErr'), 'bad'); return false; }
-  try { await encApi('/encoder/config', 'PUT', body); encMsg(t('eSaved'), 'ok'); return true; }
+  try { await encApi('/encoder/config', 'PUT', body); encMsg(t('eSaved'), 'ok'); if (ws.running) hapticSyncConfig().catch(() => {}); return true; }
   catch (e) { encMsg(e.message, 'bad'); return false; }
 }
 async function encZero(k){
   if (!(await encSave())) return;          // ให้ backend ใช้เอนโค้ดเดอร์ที่เลือกอยู่ก่อนค่อยตั้งศูนย์
-  try { const r = await encApi('/encoder/zero/' + k, 'POST'); encMsg(t('eZeroed') + ' ' + r.offset, 'ok'); }
+  try { const r = await encApi('/encoder/zero/' + k, 'POST'); encMsg(t('eZeroed') + ' ' + r.offset, 'ok'); if (ws.running) hapticSyncConfig().catch(() => {}); }
   catch (e) { encMsg(e.message, 'bad'); }
 }
 document.querySelectorAll('[data-zero]').forEach(b => b.addEventListener('click', () => encZero(b.dataset.zero)));
@@ -714,16 +716,148 @@ $('encConn').addEventListener('click', async () => {
   const btn = $('encConn');
   btn.disabled = true;
   try {
-    if (encState && encState.connected) await encApi('/encoder/disconnect', 'POST');
-    else {
-      const port = $('encPort').value;
-      if (!port) encMsg(t('ePortNone'), 'bad');
-      else { encMsg(t('eConnecting')); await encApi('/encoder/connect', 'POST', {port}); encMsg(''); }
-    }
-  } catch (e) { encMsg(e.message, 'bad'); }
+    if (ws.running) await wsDisconnect();
+    else { encMsg(t('eConnecting')); await wsConnect(); encMsg(''); }
+  } catch (e) { encMsg(e.name === 'NotFoundError' ? '' : t('eWsOpenErr') + (e.message ? ' (' + e.message + ')' : ''), 'bad'); }
   btn.disabled = false;
   encPoll();
 });
+
+// ---- Web Serial: เบราว์เซอร์ของผู้ใช้อ่านบอร์ด (timestamp;enc1;enc2;enc3 @230400) แล้วส่ง ~20 ครั้ง/วินาทีขึ้นเซิร์ฟเวอร์ตามบัญชี ----
+const WS_BAUD = 230400, WS_SEND_MS = 50;
+const wsSupported = 'serial' in navigator;
+const ws = {running: false, port: null, reader: null, done: null, latest: null, latestAt: 0, dirty: false, sending: false, timer: null, bad: 0, lastRaw: ''};
+const WS_INT = /^\s*[+-]?\d+\s*$/;
+
+// ---- แรงสะท้อนกลับ (Trig Protocol 3: Ki;Kv;bp;by): คำนวณในเบราว์เซอร์ แล้วเขียนกลับบอร์ดทันทีที่อ่านตัวอย่างได้ ไม่ผ่านเซิร์ฟเวอร์ ----
+// เส้นทางสั้นที่สุด: อ่านบรรทัด -> HapticModel.processEncoder -> writer.write (ไม่มี fetch/timer คั่น)
+// ถ้าบอร์ดรับช้ากว่าสตรีม จะไม่สะสมคิว: เก็บเฉพาะคำสั่งล่าสุด (คำสั่งเก่าที่ยังไม่ได้ส่งถูกทิ้ง)
+const haptic = {model: new HapticModel(), active: false, writer: null, writing: false, pending: null, last: null, sent: 0, lastSent: 0, hz: 0};
+const hapticEnc = new TextEncoder();
+setInterval(() => { haptic.hz = haptic.sent - haptic.lastSent; haptic.lastSent = haptic.sent; }, 1000);
+function hapticStep(ts, e1, e2, e3){
+  let cmd;
+  try { cmd = haptic.model.processEncoder(ts, e1, e2, e3); } catch (e) { return; }
+  haptic.pending = cmd;
+  if (!haptic.writing) hapticFlush();
+}
+async function hapticFlush(){
+  const w = haptic.writer;
+  if (!w) { haptic.pending = null; return; }
+  haptic.writing = true;
+  try {
+    while (haptic.pending !== null) {
+      const c = haptic.pending; haptic.pending = null;
+      await w.write(hapticEnc.encode(c + '\n'));
+      haptic.last = c; haptic.sent++;
+    }
+  } catch (e) { haptic.active = false; haptic.pending = null; }
+  haptic.writing = false;
+}
+function hapticRelease(){    // หยุดแรง: Ki=0 และปลดล็อก (ส่งเฉพาะเมื่อเคยส่งคำสั่งแรงไปแล้ว)
+  if (!haptic.writer || haptic.last === null || haptic.last === HapticModel.RELEASE_COMMAND) return;
+  haptic.pending = HapticModel.RELEASE_COMMAND;
+  if (!haptic.writing) hapticFlush();
+}
+function hapticUpdate(){     // ทำงานเมื่อ: เชื่อมต่อบอร์ดอยู่ + ติ๊ก Force Feedback + อยู่หน้า Simulation
+  const want = ws.running && simFF && simTimer !== null;
+  if (want === haptic.active) return;
+  if (want) { try { haptic.model.applyAge(state.age); } catch (e) {} haptic.model.resetState(); haptic.active = true; }
+  else { haptic.active = false; hapticRelease(); }
+}
+async function hapticShutdown(){   // ก่อนปิดพอร์ต: ปล่อยแรงแล้วคืน writer
+  const w = haptic.writer;
+  haptic.active = false;
+  if (!w) return;
+  hapticRelease();
+  try {
+    for (let i = 0; haptic.writing && i < 500; i++) await new Promise(r => setTimeout(r, 1));
+    w.releaseLock();
+  } catch (e) {}
+  haptic.writer = null; haptic.pending = null; haptic.last = null;
+}
+async function hapticSyncConfig(){   // ให้โมเดลในเบราว์เซอร์ใช้ PPR/offset/ช่อง เดียวกับที่บันทึกในหน้า Settings
+  const st = await encApi('/encoder/state');
+  haptic.model.applyEncoderConfig(st.config);
+}
+function wsHandleLine(line){
+  line = line.trim();
+  if (!line) return;
+  const f = line.split(';');
+  if (f.length >= 4 && f.slice(0, 4).every(x => WS_INT.test(x))) {      // ฟิลด์ที่ 5 เป็นต้นไปข้าม (เหมือน EncoderStreamReader.parse_line)
+    const [timestamp, enc1, enc2, enc3] = f.slice(0, 4).map(Number);
+    ws.latest = {timestamp, enc1, enc2, enc3}; ws.dirty = true; ws.latestAt = performance.now();
+    if (haptic.active) hapticStep(timestamp, enc1, enc2, enc3);
+  } else { ws.bad++; ws.lastRaw = line.slice(0, 80); }
+}
+async function wsSend(){
+  if (ws.sending || !ws.dirty || !ws.latest || !authToken) return;
+  ws.sending = true; ws.dirty = false;
+  try { await encApi('/encoder/ingest', 'POST', {...ws.latest, bad_lines: ws.bad, last_raw: ws.lastRaw || null}); }
+  catch (e) { /* 401: encApi เรียก authExpired ซึ่งตัดการเชื่อมต่อแล้ว; อย่างอื่นรอรอบหน้า */ }
+  ws.sending = false;
+}
+async function wsReadLoop(reader){
+  const dec = new TextDecoder();
+  let buf = '', first = true;
+  try {
+    while (ws.running) {
+      const {value, done} = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, {stream: true});
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i); buf = buf.slice(i + 1);
+        if (first) { first = false; continue; }       // บรรทัดแรกหลังเปิดพอร์ตมักขาดครึ่งๆ กลางๆ ข้ามไป
+        wsHandleLine(line);
+      }
+      if (buf.length > 4096) buf = '';
+    }
+  } catch (e) { if (ws.running) { encMsg(t('eWsLost'), 'bad'); } }   // สายหลุด/ถอดบอร์ด
+  finally { await wsCleanup(); }
+}
+async function wsConnect(){
+  if (!wsSupported) throw new Error(t('eNoWebSerial'));
+  const port = await navigator.serial.requestPort();        // ต้องมาจากการกดปุ่ม: เบราว์เซอร์เปิดหน้าต่างให้เลือกพอร์ต
+  await port.open({baudRate: WS_BAUD});
+  Object.assign(ws, {running: true, port, latest: null, dirty: false, bad: 0, lastRaw: ''});
+  ws.reader = port.readable.getReader();
+  haptic.writer = port.writable ? port.writable.getWriter() : null;
+  haptic.pending = null; haptic.last = null;
+  try { await hapticSyncConfig(); } catch (e) {}      // ไม่ได้ก็ใช้ค่าตั้งต้น (ตรงกับค่าตั้งต้นของเซิร์ฟเวอร์)
+  ws.timer = setInterval(wsSend, WS_SEND_MS);
+  ws.done = wsReadLoop(ws.reader);
+  hapticUpdate();
+}
+async function wsCleanup(){
+  const port = ws.port, reader = ws.reader, was = !!port;
+  clearInterval(ws.timer);
+  Object.assign(ws, {running: false, port: null, reader: null, timer: null, dirty: false});
+  try { if (reader) { await reader.cancel().catch(() => {}); reader.releaseLock(); } } catch (e) {}
+  await hapticShutdown();
+  try { if (port) await port.close(); } catch (e) {}
+  if (was && authToken) { try { await encApi('/encoder/disconnect', 'POST'); } catch (e) {} }
+  encPoll();
+}
+async function wsDisconnect(){
+  if (!ws.running) return;
+  const done = ws.done;
+  ws.running = false;
+  try { if (ws.reader) await ws.reader.cancel(); } catch (e) {}   // ทำให้ read loop จบ แล้ว wsCleanup ปิดพอร์ต + แจ้งเซิร์ฟเวอร์
+  if (done) await done;
+}
+async function wsResetServer(){   // เปิดหน้าใหม่/ล็อกอินใหม่: ค่าที่ค้างบนเซิร์ฟเวอร์จากรอบก่อนไม่ใช่การเชื่อมต่อจริงแล้ว
+  if (!ws.running && authToken) { try { await encApi('/encoder/disconnect', 'POST'); } catch (e) {} }
+}
+if (wsSupported) navigator.serial.addEventListener('disconnect', e => { if (ws.port && e.target === ws.port) wsDisconnect(); });
+function wsRenderUi(){      // โหมดเว็บไม่มีรายชื่อพอร์ต: เบราว์เซอร์เปิดหน้าต่างเลือกพอร์ตให้เอง
+  $('encPort').closest('label').hidden = true;
+  $('encPortRefresh').hidden = true;
+  const hint = $('encWs');
+  hint.hidden = wsSupported;
+  hint.textContent = wsSupported ? '' : t('eNoWebSerial');
+  $('encConn').disabled = !wsSupported;
+}
 
 async function encPoll(){
   if (encBusy) return;
@@ -771,8 +905,8 @@ function encRenderPorts(){
 $('encPortRefresh').addEventListener('click', encLoadPorts);
 
 function encStart(){
+  wsRenderUi();
   if (!encTimer) { encPoll(); encTimer = setInterval(encPoll, 70); }   // ~15 FPS เหมือน debugger
-  if (!encPortsTimer) { encLoadPorts(); encPortsTimer = setInterval(encLoadPorts, 2000); }
 }
 function encStop(){ clearInterval(encTimer); encTimer = null; clearInterval(encPortsTimer); encPortsTimer = null; }
 
@@ -783,11 +917,11 @@ function encRender(){
     ENC_JOINTS.forEach(([k]) => { $('live_' + k).textContent = '–'; });
     return;
   }
-  encRenderPorts();
+  wsRenderUi();
   const live = encState.connected && encState.age_ms !== null && encState.age_ms < 1500;
   dot.className = 'dotc ' + (live ? 'ok' : 'warn');
   st.textContent = (encState.connected ? (live ? t('eOn') + ' ' + encState.port : t('eStale')) : t('eOff')) + (encState.error ? ' – ' + encState.error : '');
-  btn.textContent = encState.connected ? t('eDisc') : t('eConnect');
+  btn.textContent = ws.running ? t('eDisc') : t('eConnect');
   const diag = $('encDiag');
   if (encState.connected && !live) {      // เชื่อมต่อแล้วแต่ไม่มีข้อมูลสด: บอกสาเหตุที่น่าจะเป็น
     diag.hidden = false;
@@ -1040,7 +1174,7 @@ function simPick(cx, cy){
   simGL.ray.setFromCamera(new THREE.Vector2((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height * 2 - 1)), simGL.camera);
   const res = simHit();
   if (res === 'off') { $('simNote').textContent = t('simOffSite'); return; }
-  if (res) { simRun = simNew(); $('simNote').textContent = ''; simRender(); }
+  if (res) { simNewRound(); $('simNote').textContent = ''; simRender(); }
 }
 
 function simDerive(p){
@@ -1082,7 +1216,7 @@ async function histLoad(){
 function simStep(){
   if (!simPose) return;
   const d = simDerive(simPose), r = simRun, before = r.phase;
-  if (d.x <= 0 && r.phase !== 'idle') { simFinish(); simRun = simNew(); $('simNote').textContent = ''; return; }   // ถอยเข็มพ้นผิว = จบรอบ เริ่มรอบใหม่
+  if (d.x <= 0 && r.phase !== 'idle') { simFinish(); simNewRound(); $('simNote').textContent = ''; return; }   // ถอยเข็มพ้นผิว = จบรอบ เริ่มรอบใหม่
   if (r.phase === 'idle' && d.x > 0) { r.phase = 'inserted'; r.score = d.score; if (simTarget && !simTarget.site) { r.phase = 'failed'; r.why = 'site'; } }   // ล็อกคะแนนมุม ณ ตอนเข็มแตะผิว (เทียบกับจุดเจาะที่เลือก)
   r.maxX = Math.max(r.maxX, d.x);
   if (r.phase === 'inserted' || r.phase === 'success') {
@@ -1094,7 +1228,17 @@ function simStep(){
   }
   if (r.phase !== before) { simSfx(r.phase); if (r.phase === 'failed') simFinish(); }   // โดนปอด = จบทันที
 }
+function simNewRound(){ simRun = simNew(); haptic.model.resetState(); }   // รอบใหม่: ล้างความลึกสูงสุดของโมเดลแรง ไม่งั้นผิวหนังจะไม่ต้านรอบถัดไป
+let simTickN = 0;
+function simTick(){ if (ws.running || ++simTickN % 2 === 0) simPoll(); }   // อ่านจากบอร์ดตรงๆ ~30 ครั้ง/วินาที ไม่งั้นถามเซิร์ฟเวอร์ ~15 ครั้ง/วินาที
 async function simPoll(){
+  if (ws.running) {    // เบราว์เซอร์อ่านบอร์ดเอง: คำนวณท่าเข็มในเครื่อง ไม่ต้องรอเซิร์ฟเวอร์
+    const L = ws.latest;
+    try { simPose = L ? {...haptic.model.pose(L.enc1, L.enc2, L.enc3), connected: true, live: performance.now() - ws.latestAt < 1500} : null; } catch (e) { simPose = null; }
+    simStep();
+    simRender();
+    return;
+  }
   if (simBusy) return;
   simBusy = true;
   try { simPose = await encApi('/simulation/pose'); } catch (e) { simPose = null; }
@@ -1105,11 +1249,11 @@ async function simPoll(){
 function simStart(){
   if (simTimer) return;
   simDiff = state.diff; $('simDiff').value = simDiff; Object.assign(SIM, SIM_DIFF[simDiff]);   // เริ่มจากความยากที่เลือกในหน้าตั้งค่า
-  simRun = simNew(); $('simNote').textContent = '';
-  histLoad(); simPoll(); simTimer = setInterval(simPoll, 70);
+  simNewRound(); $('simNote').textContent = '';
+  histLoad(); simPoll(); simTimer = setInterval(simTick, 33); hapticUpdate();
 }
-function simStop(){ simFinish(); clearInterval(simTimer); simTimer = null; if (document.fullscreenElement) document.exitFullscreen(); }
-$('simReset').addEventListener('click', () => { simFinish(); simRun = simNew(); $('simNote').textContent = ''; simRender(); });
+function simStop(){ simFinish(); clearInterval(simTimer); simTimer = null; hapticUpdate(); if (document.fullscreenElement) document.exitFullscreen(); }
+$('simReset').addEventListener('click', () => { simFinish(); simNewRound(); $('simNote').textContent = ''; simRender(); });
 
 // ---- แถบเครื่องมือ: Pointer(เลือกจุดเจาะ) / Orbit / Zoom, Needle(กล้องตามปลายเข็ม), Layers, Measure, Undo/Redo (มุมมอง) ----
 let simHist = [], simHi = 0;
@@ -1142,7 +1286,7 @@ document.querySelectorAll('[data-layer]').forEach(c => c.addEventListener('chang
 $('simUndo').addEventListener('click', () => simGo(simHi - 1));
 $('simRedo').addEventListener('click', () => simGo(simHi + 1));
 $('simSfx').addEventListener('change', e => { simSfxOn = e.target.checked; try { localStorage.setItem('simSfx', simSfxOn ? '1' : '0'); } catch (x) {} simTone(660, 90); });
-$('simFf').addEventListener('change', e => { simFF = e.target.checked; try { localStorage.setItem('simFf', simFF ? '1' : '0'); } catch (x) {} });
+$('simFf').addEventListener('change', e => { simFF = e.target.checked; try { localStorage.setItem('simFf', simFF ? '1' : '0'); } catch (x) {} hapticUpdate(); });
 $('simDiff').addEventListener('change', e => { simDiff = +e.target.value; Object.assign(SIM, SIM_DIFF[simDiff]); simRender(); });
 $('simFs').addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen(); else if (simStage.requestFullscreen) simStage.requestFullscreen(); });
 document.addEventListener('fullscreenchange', () => { $('simFs').innerHTML = document.fullscreenElement ? '&#10005;' : '&#9974;'; simRender(); });
@@ -1203,7 +1347,8 @@ function simUi(d){
   chip.className = 'sim-chip ' + cls; chip.textContent = txt;
   banner.hidden = !(r.phase === 'failed' || r.phase === 'success');
   banner.className = 'sim-banner ' + cls; banner.textContent = txt;
-  $('simConn').textContent = p.live ? '' : t('simOff');
+  const hf = haptic.active ? t('simFfOn') + ' \u00b7 ' + haptic.hz + ' Hz' : (simFF && !ws.running ? t('simFfNeed') : '');
+  $('simConn').textContent = p.live ? hf : t('simOff') + (hf ? ' \u00b7 ' + hf : '');
   $('simMtx').textContent = simMeasure ? `${d.x.toFixed(1)} mm  |  ${t('mPleura')} ${(p.pleura_mm - d.x).toFixed(1)} mm  |  ${t('mLung')} ${(p.lung_mm - d.x).toFixed(1)} mm` : '';
 }
 
@@ -1385,6 +1530,7 @@ function authReset(){   // ล้างข้อมูลของผู้ใ�
   authRender();
 }
 function authExpired(){
+  if (ws.running) wsDisconnect();
   authToken = authUser = null;
   authStore(); authReset();
   authShow('aExpired', 'login');
@@ -1405,7 +1551,7 @@ $('authForm').addEventListener('submit', async e => {
     authToken = r.token; authUser = r.username; authStore();
     $('aPass').value = $('aPass2').value = $('aUser').value = $('aEmail').value = '';
     authMsg(''); $('auth').hidden = true; authMode = 'login';
-    authReset(); histLoad();
+    authReset(); histLoad(); wsResetServer();
   } catch (err) {
     authMsg(err.status === 401 ? 'aBad' : err.code === 'email_taken' ? 'aEmailTaken' : err.status === 409 ? 'aTaken' : err.code === 'bad_email' ? 'aEmailErr' : err.status === 429 ? 'aLocked'
       : err.status ? '' : 'eApiErr', err.message);
@@ -1422,6 +1568,7 @@ $('profile').addEventListener('click', e => { e.stopPropagation(); pmToggle(); }
 $('profile').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pmToggle(); } });
 document.addEventListener('click', e => { if (!$('pmenu').contains(e.target)) $('pmenu').hidden = true; });
 $('pmOut').addEventListener('click', async () => {
+  await wsDisconnect();            // ปิดพอร์ต USB ก่อนออกจากระบบ (ยังมี token ไว้แจ้งเซิร์ฟเวอร์)
   try { await encApi('/auth/logout', 'POST', {}); } catch (e) {}
   authToken = authUser = null; authStore(); authReset();
   location.hash = '#dashboard';
@@ -1433,7 +1580,7 @@ async function authInit(){   // ตรวจ token ที่เก็บไว�
     try {
       const me = await encApi('/auth/me');
       authUser = me.username; authStore();
-      $('auth').hidden = true; authMsg(''); authRender(); histLoad();
+      $('auth').hidden = true; authMsg(''); authRender(); histLoad(); wsResetServer();
       return;
     } catch (e) {
       if (e.status) return;          // 401: encApi เรียก authExpired แล้ว (แสดงหน้าล็อกอิน)
