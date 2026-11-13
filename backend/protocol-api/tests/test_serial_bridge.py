@@ -15,6 +15,7 @@ class FakeSerialModule:
         self._lines = list(lines)
         self._fail_open = fail_open
         self.instance = None
+        self.written = []
 
     def Serial(self, port, baud, timeout=1):
         if self._fail_open:
@@ -27,6 +28,9 @@ class FakeSerialModule:
 
             def reset_input_buffer(self):
                 self.reset_called = True
+
+            def write(self, data):
+                outer.written.append(data)
 
             def readline(self):
                 if not outer._lines:
@@ -69,6 +73,7 @@ class RunBridgeTests(unittest.TestCase):
         for p in (
             mock.patch.object(serial_bridge, "client", offline_client()),
             mock.patch.object(serial_bridge.time, "sleep"),
+            mock.patch.object(serial_bridge, "SYNC_ENCODER_CONFIG", False),
         ):
             p.start()
             self.addCleanup(p.stop)
@@ -117,6 +122,47 @@ class RunBridgeTests(unittest.TestCase):
              mock.patch("builtins.print") as pr:
             serial_bridge.run_bridge()
         self.assertTrue(any("ดึง Schema" in str(c.args[0]) for c in pr.call_args_list))
+
+    def test_samples_are_processed_and_commands_written_back(self):
+        fake, _ = self.run_with([b"100;0;0;0\n", b"110;0;0;0\n"], max_samples=2)
+        self.assertEqual(len(fake.written), 2)
+        for data in fake.written:
+            self.assertTrue(data.endswith(b"\n"))
+            self.assertEqual(len(data.decode().strip().split(";")), 4)  # Ki;Kv;bp;by
+
+    def test_send_commands_can_be_disabled(self):
+        with mock.patch.object(serial_bridge, "SEND_COMMANDS", False):
+            fake, _ = self.run_with([b"100;0;0;0\n"], max_samples=1)
+        self.assertEqual(fake.written, [])
+
+    def test_model_error_does_not_stop_bridge(self):
+        model_cls = serial_bridge.TissueResistanceModel
+        with mock.patch.object(model_cls, "process_encoder", side_effect=[ValueError("bad"), "1;2;0;0"]):
+            fake, out = self.run_with([b"100;0;0;0\n", b"110;0;0;0\n"], max_samples=2)
+        self.assertEqual(fake.written, [b"1;2;0;0\n"])
+        self.assertTrue(any("โมเดลประมวลผล" in o for o in out))
+
+    def test_config_sync_starts_and_stops_when_enabled(self):
+        model_cls = serial_bridge.TissueResistanceModel
+        with mock.patch.object(serial_bridge, "SYNC_ENCODER_CONFIG", True), \
+             mock.patch.object(model_cls, "apply_encoder_config_from_api") as apply_cfg, \
+             mock.patch.object(model_cls, "start_encoder_config_sync") as start, \
+             mock.patch.object(model_cls, "stop_encoder_config_sync") as stop:
+            self.run_with([b"1;1;1;1\n"], max_samples=1)
+        apply_cfg.assert_called_once()
+        start.assert_called_once()
+        stop.assert_called_once()
+
+    def test_config_fetch_failure_falls_back_to_defaults(self):
+        import requests
+        model_cls = serial_bridge.TissueResistanceModel
+        with mock.patch.object(serial_bridge, "SYNC_ENCODER_CONFIG", True), \
+             mock.patch.object(model_cls, "apply_encoder_config_from_api", side_effect=requests.ConnectionError("down")), \
+             mock.patch.object(model_cls, "start_encoder_config_sync"), \
+             mock.patch.object(model_cls, "stop_encoder_config_sync"):
+            fake, out = self.run_with([b"100;0;0;0\n"], max_samples=1)
+        self.assertTrue(any("ค่าตั้งต้น" in o for o in out))
+        self.assertEqual(len(fake.written), 1)  # บริดจ์ยังทำงานต่อด้วยค่าตั้งต้น
 
 
 if __name__ == "__main__":

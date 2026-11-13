@@ -1,11 +1,15 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, model_validator
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 import json
 import os
 
 from protocol_sdk.client import ProtocolClient
+import threading
+
+from encoder_service import EncoderService, list_serial_ports
+from tissue_model import TissueResistanceModel
 
 app = FastAPI(
     title="Hardware/Software Protocol Schema API",
@@ -29,6 +33,7 @@ app.add_middleware(
 
 DB_FILE = "protocols.json"
 SESSIONS_FILE = "sessions.json"
+ATTEMPTS_FILE = "attempts.json"  # ผลการจำลองแต่ละครั้ง (ใช้แสดงในหน้า History)
 
 def load_db() -> Dict[str, dict]:
     if os.path.exists(DB_FILE):
@@ -56,12 +61,33 @@ def save_sessions(data: List[dict]):
     with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
+def load_attempts() -> List[dict]:
+    if os.path.exists(ATTEMPTS_FILE):
+        with open(ATTEMPTS_FILE, "r", encoding="utf-8") as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                return []
+    return []
+
+def save_attempts(data: List[dict]):
+    with open(ATTEMPTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
 # โหลดข้อมูลจากไฟล์ JSON ทันทีที่เซิร์ฟเวอร์เริ่มทำงาน
+attempts_db: List[dict] = load_attempts()
 protocols_db: Dict[str, dict] = load_db()
 sessions_db: List[dict] = load_sessions()
 
 # ใช้ SDK สำหรับ decode/encode โดยอ่าน Schema จาก protocols_db ในหน่วยความจำ (ไม่ยิง HTTP กลับมาที่ตัวเอง)
 sdk_client = ProtocolClient()
+
+# อ่านเอนโค้ดเดอร์ + config สำหรับหน้า Settings (ไม่เปิดพอร์ตเองจนกว่าจะเรียก /encoder/connect)
+encoder_service = EncoderService()
+
+# โมเดลสำหรับคำนวณท่าเข็ม/ความลึกให้หน้า Simulation (ใช้เฉพาะ pose() ที่ไม่มี side effect)
+sim_model = TissueResistanceModel()
+sim_lock = threading.Lock()
 
 def decode_with_schema(protocol_id: str, value: int) -> Dict[str, int]:
     if protocol_id not in protocols_db:
@@ -214,3 +240,95 @@ def ingest_trig4(body: Trig4Ingest):
 @app.get("/sessions")
 def list_sessions():
     return sessions_db
+
+# =========================================================================
+# เอนโค้ดเดอร์ (หน้า Settings): config, ค่าสด, Set Zero, เชื่อมต่อ Serial
+# =========================================================================
+class EncoderJointConfig(BaseModel):
+    encoder_id: str
+    ppr: int = Field(ge=1)
+
+class EncoderConnectBody(BaseModel):
+    port: Optional[str] = None                  # ไม่ระบุ = เลือกให้เองเมื่อเครื่องเห็นพอร์ตเดียว
+    baud: int = Field(default=230400, ge=1)
+
+@app.get("/encoder/state")
+def encoder_state():
+    """config (encoder_id/ppr/offset) + ค่า raw ล่าสุดของ Enc_1..3 + สถานะการเชื่อมต่อ"""
+    return encoder_service.state()
+
+@app.get("/encoder/ports")
+def encoder_ports():
+    """พอร์ต Serial ที่เสียบอยู่ตอนนี้ ให้หน้า Settings ใช้เลือกพอร์ต (ไม่ฟิก COM)"""
+    return {"ports": list_serial_ports()}
+
+@app.put("/encoder/config")
+def encoder_set_config(body: Dict[str, EncoderJointConfig]):
+    try:
+        cfg = encoder_service.set_config({k: v.model_dump() for k, v in body.items()})
+    except ValueError as err:
+        raise HTTPException(status_code=400, detail=str(err))
+    return {"ok": True, "config": cfg}
+
+@app.post("/encoder/zero/{joint}")
+def encoder_zero(joint: str):
+    try:
+        offset = encoder_service.zero(joint)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"ไม่รู้จักข้อต่อ '{joint}'")
+    except RuntimeError as err:
+        raise HTTPException(status_code=409, detail=str(err))
+    return {"ok": True, "joint": joint, "offset": offset}
+
+@app.post("/encoder/connect")
+def encoder_connect(body: EncoderConnectBody):
+    try:
+        encoder_service.connect(body.port, body.baud)
+    except RuntimeError as err:
+        raise HTTPException(status_code=503, detail=str(err))
+    return {"ok": True, "port": encoder_service.state()["port"]}
+
+@app.post("/encoder/disconnect")
+def encoder_disconnect():
+    encoder_service.disconnect()
+    return {"ok": True}
+
+class AttemptIn(BaseModel):
+    date: int                                   # epoch ms
+    procedure: str
+    age: str
+    difficulty: str
+    caseType: str
+    mode: str
+    score: int = Field(ge=0, le=100)            # คะแนนรวม: สำเร็จ = คะแนนมุมแทง, ไม่สำเร็จ (โดนปอด) = 0
+    seconds: float = Field(ge=0)
+    result: Literal["success", "failed"]
+    angle: int = Field(ge=0, le=100)            # คะแนนมุมแทง ณ ตอนเข็มแตะผิว
+    depth_mm: float
+    force_feedback: bool = False
+
+@app.post("/attempts")
+def save_attempt(body: AttemptIn):
+    attempts_db.append(body.model_dump())
+    save_attempts(attempts_db)
+    return {"ok": True, "count": len(attempts_db)}
+
+@app.get("/attempts")
+def list_attempts():
+    return attempts_db
+
+@app.get("/simulation/pose")
+def simulation_pose():
+    """ท่าเข็มปัจจุบันจากเอนโค้ดเดอร์ล่าสุด: pitch/yaw, depth_mm, pleura_mm, lung_mm + สถานะสตรีม"""
+    st = encoder_service.state()
+    with sim_lock:
+        if sim_model._applied_encoder_config != st["config"]:
+            sim_model.apply_encoder_config(st["config"])  # PPR / Set Zero / การสลับเอนโค้ดเดอร์จากหน้า Settings
+        raw = st["raw"]
+        pose = sim_model.pose(raw["Enc_1"], raw["Enc_2"], raw["Enc_3"])
+    live = st["connected"] and st["age_ms"] is not None and st["age_ms"] < 1500
+    return {**pose, "connected": st["connected"], "live": live}
+
+@app.on_event("shutdown")
+def _close_encoder():
+    encoder_service.disconnect()

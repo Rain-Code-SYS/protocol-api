@@ -58,12 +58,13 @@ class ReaderParseLineTests(unittest.TestCase):
             ("15230;1024;-512;3071", (15230, 1024, -512, 3071)),
             ("15230;1024;-512;3071\r\n", (15230, 1024, -512, 3071)),
             ("  0;0;0;0  ", (0, 0, 0, 0)),
+            ("1368950;-24;194;1321;0;0;0", (1368950, -24, 194, 1321)),  # เฟิร์มแวร์ส่งฟิลด์ต่อท้าย: ข้ามส่วนเกิน
         ]:
             with self.subTest(line=line):
                 self.assertEqual(EncoderStreamReader.parse_line(line), expected)
 
     def test_invalid_lines_return_none(self):
-        for line in ("", "\n", "1;2;3", "1;2;3;4;5", "a;b;c;d", "1;2;3;4.5", "1,2,3,4"):
+        for line in ("", "\n", "1;2;3", "a;b;c;d", "1;2;3;4.5", "1,2,3,4", "1;2;3;x;0;0;0"):
             with self.subTest(line=line):
                 self.assertIsNone(EncoderStreamReader.parse_line(line))
 
@@ -101,6 +102,13 @@ class ReaderSerialTests(unittest.TestCase):
         self.assertIsNone(r.read_data())            # timeout
         self.assertIsNone(r.read_data())            # บรรทัดเสีย
         self.assertEqual(r.read_data(), (1000, 1, 2, 3))  # ไบต์ไม่ใช่ utf-8 ถูกข้าม
+
+    def test_last_raw_keeps_the_unparsed_line(self):
+        r = EncoderStreamReader()
+        self.assertEqual(r.last_raw, "")
+        r.ser = FakeSerial([b"hello\r\n"])
+        self.assertIsNone(r.read_data())
+        self.assertEqual(r.last_raw, "hello\r\n")
 
     def test_read_data_without_connection(self):
         r = EncoderStreamReader()

@@ -1,3 +1,5 @@
+import copy
+import json
 import math
 import threading
 from dataclasses import dataclass
@@ -39,6 +41,10 @@ class AxisCalibration:
 
     def to_deg(self, counts: int) -> float:
         return self.sign * (counts - self.zero_counts) * 360.0 / self.counts_per_rev
+
+
+# ข้อต่อใน encoder_config.json (ไฟล์ที่หน้า Settings / backend แก้) → แกนใน model.axes
+ENCODER_CONFIG_AXES = {"Joint_YAW": "yaw", "Joint_PITCH": "pitch", "Slider_MOTOR": "theta2"}
 
 
 class TissueResistanceModel:
@@ -89,12 +95,13 @@ class TissueResistanceModel:
         self.gamma_lung = 0.5        # สัดส่วนแรงเหลือเมื่อถอยเข็มออกจากปอด (0.0 - 1.0)
 
         # --- เอนโค้ดเดอร์ (Trig Protocol 2: timestamp;enc1;enc2;enc3) → มุมของแต่ละแกน ---
-        # ⚠️ การจับคู่ช่อง→แกน (enc1=pitch, enc2=yaw, enc3=theta2) เป็นค่าตั้งต้นตามลำดับเดิมของโปรโตคอล
-        #    ต้องตรวจให้ตรงกับการต่อสายจริง
+        # ค่าตั้งต้นตรงกับหน้า Settings / encoder_config.json: Enc_1 = Yaw (2048 PPR), Enc_2 = Pitch (800 PPR),
+        # Enc_3 = Slider = theta2 (4096 PPR), ศูนย์ = 0
+        # ถ้าแก้ค่าในหน้า Settings (PPR, Set Zero, สลับเอนโค้ดเดอร์) ให้เรียก apply_encoder_config_from_api() ซิงก์ให้ตรงกัน
         self.axes: Dict[str, AxisCalibration] = {
-            "pitch": AxisCalibration("enc1"),
-            "yaw": AxisCalibration("enc2"),
-            "theta2": AxisCalibration("enc3"),
+            "pitch": AxisCalibration("enc2", counts_per_rev=800.0),
+            "yaw": AxisCalibration("enc1", counts_per_rev=2048.0),
+            "theta2": AxisCalibration("enc3", counts_per_rev=4096.0),
         }
         # Touch ไม่ได้มาจากเอนโค้ดเดอร์อีกแล้ว: 1 = สัมผัส/ต้านแรง (ค่าเดิมตอนใช้งาน), 0 = ไม่สัมผัส/ปลดล็อก
         # ถ้ามีเซนเซอร์แยก ให้ส่งค่าผ่านพารามิเตอร์ touch ของ process_encoder() หรือเซ็ต model.touch
@@ -112,6 +119,12 @@ class TissueResistanceModel:
         # --- การตั้งค่าเคสจาก Trig Protocol 1 (ค่าเริ่มต้น = Adult ตรงกับค่าคงที่ด้านบน) ---
         self.age_code = 1
         self.settings: Dict[str, int] = {}
+
+        # ซิงก์ config เอนโค้ดเดอร์อัตโนมัติ (ดู start_encoder_config_sync)
+        self._applied_encoder_config: Optional[Dict[str, Any]] = None
+        self._pending_encoder_config: Optional[Dict[str, Any]] = None
+        self._sync_stop = threading.Event()
+        self._sync_thread: Optional[threading.Thread] = None
 
     # =========================================================================
     # 🔗 1.1 เชื่อม Trig Protocol 1 → พารามิเตอร์ของโมเดล
@@ -207,6 +220,95 @@ class TissueResistanceModel:
         return settings
 
     # =========================================================================
+    # 🎛️ 1.3 ใช้ config เอนโค้ดเดอร์ชุดเดียวกับหน้า Settings (encoder_config.json)
+    #   Joint_YAW→yaw, Joint_PITCH→pitch, Slider_MOTOR→theta2 | encoder_id→channel, ppr→counts_per_rev, offset→zero_counts
+    #   ค่าตั้งต้นใน self.axes ตรงกับ config ปัจจุบันอยู่แล้ว แต่ไม่ได้ซิงก์อัตโนมัติ: เรียกเมธอดเหล่านี้เมื่อแก้ในหน้า Settings (เช่น Set Zero ใหม่)
+    #   sign ไม่มีใน config จึงคงค่าเดิมของแต่ละแกน
+    # =========================================================================
+    def apply_encoder_config(self, config: Dict[str, Dict[str, Any]]):
+        """ตั้ง channel / counts_per_rev / zero_counts ของ model.axes จาก dict รูปแบบ encoder_config.json
+
+        ตรวจครบทุกข้อต่อก่อนค่อยเปลี่ยน (ผิดข้อเดียว = ไม่แตะโมเดลเลย) แล้วเริ่มรอบการแทงใหม่ เพราะศูนย์เปลี่ยนแล้ว
+        """
+        updates = {}
+        for joint, axis in ENCODER_CONFIG_AXES.items():
+            item = config.get(joint)
+            if not isinstance(item, dict):
+                raise KeyError(f"encoder config ขาดข้อต่อ '{joint}'")
+            channel = str(item.get("encoder_id", "")).lower().replace("_", "")  # "Enc_1" → "enc1"
+            if channel not in ("enc1", "enc2", "enc3"):
+                raise ValueError(f"'{joint}' ใช้ encoder_id '{item.get('encoder_id')}' ซึ่งไม่มี (ใช้ได้: Enc_1, Enc_2, Enc_3)")
+            ppr = item.get("ppr")
+            if isinstance(ppr, bool) or not isinstance(ppr, (int, float)) or ppr <= 0:
+                raise ValueError(f"PPR ของ '{joint}' ต้องมากกว่า 0")
+            updates[axis] = (channel, float(ppr), int(item.get("offset", 0)))
+        channels = [u[0] for u in updates.values()]
+        if len(set(channels)) != len(channels):
+            raise ValueError("encoder config เลือกเอนโค้ดเดอร์ซ้ำกันหลายข้อต่อ")
+        for axis, (channel, ppr, offset) in updates.items():
+            cal = self.axes[axis]
+            cal.channel, cal.counts_per_rev, cal.zero_counts = channel, ppr, offset
+        self._applied_encoder_config = copy.deepcopy(config)
+        self.reset_state()
+
+    def load_encoder_config(self, path: str = "encoder_config.json"):
+        """อ่านไฟล์ encoder_config.json แล้วใช้กับโมเดล (ต้องเป็นไฟล์ที่ backend เขียน ไม่ใช่สำเนาเก่า)"""
+        with open(path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        self.apply_encoder_config(config)
+        return config
+
+    def apply_encoder_config_from_api(self):
+        """ดึง config ล่าสุดจาก backend (GET /encoder/state) แล้วใช้กับโมเดล — ไม่ต้องรู้ที่อยู่ไฟล์"""
+        resp = requests.get(f"{self.client.base_url}/encoder/state", timeout=5)
+        resp.raise_for_status()
+        config = resp.json()["config"]
+        self.apply_encoder_config(config)
+        return config
+
+    # --- ซิงก์อัตโนมัติ: thread คอยดึง config จาก API แล้วฝากไว้เป็น pending ---
+    #     การเปลี่ยนค่าแกนจริงทำในลูปอ่านเอนโค้ดเดอร์ (ต้นของ process_encoder) ค่าจึงไม่เปลี่ยนกลางการคำนวณตัวอย่างเดียวกัน
+    def fetch_encoder_config(self) -> bool:
+        """ดึง config ล่าสุดจาก API (GET /encoder/state) ถ้าต่างจากที่ใช้อยู่จะเก็บเป็น pending แล้วคืน True
+        ติดต่อ API ไม่ได้ = คืน False และใช้ค่าเดิมต่อ (ไม่ให้ลูปฮาร์ดแวร์ล้ม)"""
+        try:
+            resp = requests.get(f"{self.client.base_url}/encoder/state", timeout=2)
+            resp.raise_for_status()
+            config = resp.json()["config"]
+        except (requests.RequestException, ValueError, KeyError):
+            return False
+        if config == self._applied_encoder_config:
+            return False
+        self._pending_encoder_config = config
+        return True
+
+    def _apply_pending_encoder_config(self):
+        pending, self._pending_encoder_config = self._pending_encoder_config, None
+        if pending is None:
+            return
+        try:
+            self.apply_encoder_config(pending)
+        except (KeyError, ValueError) as err:
+            self._applied_encoder_config = copy.deepcopy(pending)  # จำไว้ว่าชุดนี้ใช้ไม่ได้ จะได้ไม่ลองซ้ำทุกรอบ
+            print(f"[TissueModel] config เอนโค้ดเดอร์จาก API ใช้ไม่ได้ คงค่าเดิมไว้: {err}")
+
+    def start_encoder_config_sync(self, interval: float = 1.0):
+        """เริ่ม thread (daemon) ดึง config จาก API ทุก interval วินาที: แก้ PPR / Set Zero / สลับเอนโค้ดเดอร์ในหน้า Settings แล้วโมเดลจะใช้ค่าใหม่เอง"""
+        if self._sync_thread is not None and self._sync_thread.is_alive():
+            return
+        self._sync_stop.clear()
+
+        def loop():
+            while not self._sync_stop.wait(interval):
+                self.fetch_encoder_config()
+
+        self._sync_thread = threading.Thread(target=loop, daemon=True)
+        self._sync_thread.start()
+
+    def stop_encoder_config_sync(self):
+        self._sync_stop.set()
+
+    # =========================================================================
     # 🧮 2. ฟังก์ชันย่อยสำหรับคำนวณส่วนประกอบของแรง (Sub-Force Calculations)
     # =========================================================================
     def f_skin(self, x):
@@ -292,6 +394,17 @@ class TissueResistanceModel:
     # =========================================================================
     # 🔄 4. คำนวณ Kinematics & ลูปหลัก
     # =========================================================================
+    def pose(self, enc1: int, enc2: int, enc3: int) -> Dict[str, float]:
+        """ท่าของเข็มจากเอนโค้ดเดอร์ (ไม่มี side effect: ไม่แตะสถานะความเร็ว/ปอด/API) สำหรับหน้า Simulation
+
+        คืนมุม pitch/yaw (องศา, -180..180), ความลึก depth_mm จากผิว (ลบ = ยังไม่แตะ) และระยะที่ทะลุเยื่อหุ้มปอด/เริ่มโดนปอด (mm)
+        """
+        pitch, yaw, theta2 = self.encoders_to_angles(enc1, enc2, enc3)
+        wrap = lambda a: (a + 180.0) % 360.0 - 180.0
+        x = self.depth_from_s(self.calculate_kinematics(theta2)[0])
+        return {"pitch_deg": wrap(pitch), "yaw_deg": wrap(yaw), "depth_mm": x * 1000.0,
+                "pleura_mm": (self.x_pleura + self.delta2) * 1000.0, "lung_mm": self.x_lung * 1000.0}
+
     def calculate_kinematics(self, theta2_deg):
         theta2_rad = math.radians(theta2_deg)
         sin_t2 = math.sin(theta2_rad)
@@ -355,6 +468,8 @@ class TissueResistanceModel:
 
         ใช้ได้ตรงๆ:  cmd = model.process_encoder(*reader.read_data())
         """
+        self._apply_pending_encoder_config()  # ใช้ config ใหม่ (ถ้ามี) ก่อนแปลง counts → มุมของตัวอย่างนี้
+
         if touch is None:
             touch = self.touch
 

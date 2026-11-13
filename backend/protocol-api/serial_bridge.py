@@ -9,19 +9,30 @@ from typing import Optional
 import requests
 
 from protocol_sdk.client import ProtocolClient
+from tissue_model import TissueResistanceModel
 
 try:
     import serial  # pyserial
 except ImportError:  # ยังไม่ได้ติดตั้ง pyserial: ยังใช้ parse_telemetry_line() ได้ แต่ run_bridge() จะแจ้งให้ติดตั้ง
     serial = None
 
-SERIAL_PORT = 'COM16'   # ปรับเปลี่ยนตามพอร์ตที่ต่อกับ STM32
+SERIAL_PORT = 'COM3'   # ปรับเปลี่ยนตามพอร์ตที่ต่อกับ STM32
 BAUD_RATE = 230400
 API_URL = "http://127.0.0.1:8000"  # FastAPI backend (ใช้ผ่าน SDK)
 PRINT_EVERY = 10        # สตรีมเร็ว: แสดงผลทุกๆ N ตัวอย่าง กันหน้าจอกวาดช้าจนอ่านไม่ทัน
+SEND_COMMANDS = True    # ส่งคำสั่ง Trig Protocol 3 (Ki;Kv;bp;by + \n) กลับบอร์ดทางพอร์ตเดียวกัน ปิดได้ถ้าเฟิร์มแวร์ยังไม่รองรับ
+SYNC_ENCODER_CONFIG = True  # ใช้ config เอนโค้ดเดอร์จากหน้า Settings (ผ่าน API) และซิงก์ต่อเนื่องระหว่างรัน
+CONFIG_SYNC_INTERVAL = 1.0  # วินาที
 LEGACY_PREFIX = "$TRIG2"  # ถ้าเฟิร์มแวร์ยังใส่คำนำหน้านี้มา จะตัดทิ้งก่อนแกะ (ไม่ใส่ก็ได้)
 
 client = ProtocolClient(base_url=API_URL)
+
+
+def make_model() -> TissueResistanceModel:
+    """สร้างโมเดลที่ใช้ client ตัวเดียวกับบริดจ์ (แชร์ API_URL และ Schema cache)"""
+    model = TissueResistanceModel(api_url=API_URL)
+    model.client = client
+    return model
 
 
 def parse_telemetry_line(line: str) -> Optional[dict]:
@@ -54,9 +65,19 @@ def run_bridge(max_samples: Optional[int] = None):
         print(f"ดึง Schema trig_protocol_2 จาก {API_URL} ไม่ได้ (เปิด FastAPI ก่อนหรือยัง?): {e}")
         return
 
+    model = make_model()
+    if SYNC_ENCODER_CONFIG:
+        try:
+            model.apply_encoder_config_from_api()
+            print("[Bridge] ใช้ config เอนโค้ดเดอร์จากหน้า Settings (ซิงก์ต่อเนื่อง)")
+        except (requests.RequestException, KeyError, ValueError) as e:
+            print(f"[Bridge] ดึง config เอนโค้ดเดอร์ไม่ได้ ใช้ค่าตั้งต้นของโมเดลไปก่อน: {e}")
+        model.start_encoder_config_sync(CONFIG_SYNC_INTERVAL)
+
     ser = None
     received = 0
     skipped = 0
+    model_errors = 0
     try:
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1)
         print(f"Connected to STM32 on {SERIAL_PORT} at {BAUD_RATE} baud")
@@ -77,18 +98,28 @@ def run_bridge(max_samples: Optional[int] = None):
                 continue
 
             received += 1
+            command = None
+            try:
+                command = model.process_encoder(
+                    telemetry["timestamp"], telemetry["enc1"], telemetry["enc2"], telemetry["enc3"])
+            except (ValueError, KeyError, ArithmeticError) as e:
+                model_errors += 1
+                if model_errors <= 5 or model_errors % 100 == 0:
+                    print(f"[Bridge] โมเดลประมวลผลตัวอย่างไม่ได้ (รวม {model_errors}): {e!r}")
+            if command is not None and SEND_COMMANDS:
+                ser.write((command + "\n").encode("ascii"))  # Trig Protocol 3: Ki;Kv;bp;by
+
             if received % PRINT_EVERY == 1:
-                print(f"Encoder Telemetry Received: {telemetry}")
+                print(f"Encoder Telemetry Received: {telemetry} -> {command}")
             if max_samples is not None and received >= max_samples:
                 break
-
-            # TODO: ส่งต่อให้ TissueResistanceModel ที่นี่ เช่น model.process_encoder(**telemetry)
 
     except serial.SerialException as e:
         print(f"Serial Error: {e}")
     except KeyboardInterrupt:
         print("Bridge stopped by user.")
     finally:
+        model.stop_encoder_config_sync()
         if ser is not None and ser.is_open:
             ser.close()
 

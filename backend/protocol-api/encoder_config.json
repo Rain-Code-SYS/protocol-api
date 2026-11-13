@@ -1,0 +1,17 @@
+{
+    "Joint_YAW": {
+        "encoder_id": "Enc_1",
+        "ppr": 2048,
+        "offset": 0
+    },
+    "Joint_PITCH": {
+        "encoder_id": "Enc_2",
+        "ppr": 800,
+        "offset": 0
+    },
+    "Slider_MOTOR": {
+        "encoder_id": "Enc_3",
+        "ppr": 4096,
+        "offset": 0
+    }
+}

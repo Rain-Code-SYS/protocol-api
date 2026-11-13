@@ -2,6 +2,7 @@
 
 แต่ละบรรทัด:  timestamp;enc1;enc2;enc3   (จำนวนเต็มทั้ง 4 ค่า, timestamp หน่วย ms, ปิดท้ายด้วย newline)
 ตัวอย่าง:      15230;1024;-512;3071
+ถ้าเฟิร์มแวร์ส่งฟิลด์ต่อท้ายมาอีก (เช่น 1368950;-24;194;1321;0;0;0) จะอ่าน 4 ฟิลด์แรกและข้ามส่วนที่เหลือ
 """
 import time
 from typing import Optional, Tuple
@@ -15,7 +16,7 @@ Sample = Tuple[int, int, int, int]
 
 
 class EncoderStreamReader:
-    def __init__(self, port='COM16', baud_rate=230400, timeout=1):
+    def __init__(self, port='COM3', baud_rate=230400, timeout=1):
         """
         Constructor สำหรับตั้งค่าพอร์ตการเชื่อมต่อ Serial
         """
@@ -23,6 +24,7 @@ class EncoderStreamReader:
         self.baud_rate = baud_rate
         self.timeout = timeout
         self.ser = None
+        self.last_raw = ''  # บรรทัดดิบล่าสุดที่อ่านได้ (ไว้วินิจฉัยตอนบอร์ดส่งมาแต่แกะไม่ได้)
 
     def connect(self):
         """เปิดการเชื่อมต่อ Serial Port"""
@@ -43,16 +45,17 @@ class EncoderStreamReader:
     def parse_line(line: str) -> Optional[Sample]:
         """แกะ 1 บรรทัด 'timestamp;enc1;enc2;enc3' → (timestamp, enc1, enc2, enc3)
 
-        คืน None ถ้าบรรทัดว่าง จำนวนฟิลด์ไม่ครบ 4 หรือแปลงเป็นจำนวนเต็มไม่ได้
+        ฟิลด์ที่ 5 เป็นต้นไป (ถ้ามี) จะถูกข้าม
+        คืน None ถ้าบรรทัดว่าง มีฟิลด์น้อยกว่า 4 หรือ 4 ฟิลด์แรกแปลงเป็นจำนวนเต็มไม่ได้
         """
         line = line.strip()
         if not line:
             return None
         parts = line.split(';')
-        if len(parts) != 4:
+        if len(parts) < 4:
             return None
         try:
-            timestamp, enc1, enc2, enc3 = (int(p) for p in parts)
+            timestamp, enc1, enc2, enc3 = (int(p) for p in parts[:4])
         except ValueError:
             # กรณีแปลงตัวเลขขัดข้อง
             return None
@@ -65,6 +68,7 @@ class EncoderStreamReader:
         """
         if self.ser and self.ser.is_open:
             line = self.ser.readline().decode('utf-8', errors='ignore')
+            self.last_raw = line
             return self.parse_line(line)
         return None
 
@@ -77,7 +81,7 @@ class EncoderStreamReader:
 
 # สำหรับรันเทสเดี่ยวๆ (Test Script)
 if __name__ == "__main__":
-    reader = EncoderStreamReader(port='COM16', baud_rate=230400)
+    reader = EncoderStreamReader(port='COM3', baud_rate=230400)
 
     if reader.connect():
         try:
