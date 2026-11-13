@@ -3,6 +3,7 @@
 แต่ละบรรทัดจากบอร์ด:  timestamp;enc1;enc2;enc3   (จำนวนเต็มทั้ง 4 ค่า, timestamp หน่วย ms)
 ตัวอย่าง:             15230;1024;-512;3071
 """
+import os
 import time
 from typing import Optional
 
@@ -18,7 +19,7 @@ except ImportError:  # ยังไม่ได้ติดตั้ง pyserial
 
 SERIAL_PORT = 'COM3'   # ปรับเปลี่ยนตามพอร์ตที่ต่อกับ STM32
 BAUD_RATE = 230400
-API_URL = "http://127.0.0.1:8000"  # FastAPI backend (ใช้ผ่าน SDK)
+API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000").rstrip("/")  # FastAPI backend (ตั้ง API_URL=https://ชื่อ.onrender.com เพื่อชี้ไปเว็บจริง)
 PRINT_EVERY = 10        # สตรีมเร็ว: แสดงผลทุกๆ N ตัวอย่าง กันหน้าจอกวาดช้าจนอ่านไม่ทัน
 SEND_COMMANDS = True    # ส่งคำสั่ง Trig Protocol 3 (Ki;Kv;bp;by + \n) กลับบอร์ดทางพอร์ตเดียวกัน ปิดได้ถ้าเฟิร์มแวร์ยังไม่รองรับ
 SYNC_ENCODER_CONFIG = True  # ใช้ config เอนโค้ดเดอร์จากหน้า Settings (ผ่าน API) และซิงก์ต่อเนื่องระหว่างรัน

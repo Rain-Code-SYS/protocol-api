@@ -1,0 +1,8 @@
+fastapi>=0.110
+pydantic>=2
+uvicorn>=0.29
+requests>=2.25
+psycopg2-binary>=2.9
+./protocol_sdk
+# เครื่องที่ต่อบอร์ด STM32 จริง (รัน serial_bridge.py / เชื่อมต่อเอนโค้ดเดอร์) ติดตั้งเพิ่มเอง: pip install pyserial
+# เทสต์ API: pip install httpx

@@ -1,0 +1,17 @@
+# Render Blueprint: เชื่อม GitHub repo แล้ว Render จะ build/deploy ใหม่ทุกครั้งที่ git push (ลิงก์เดิมไม่เปลี่ยน)
+services:
+  - type: web
+    name: trig-simulation
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.3
+      - key: DATABASE_URL      # วาง connection string ของ Postgres (เช่น Neon) ในหน้า Dashboard ของ Render
+        sync: false
+      - key: ADMIN_KEY         # กันคนแปลกหน้าเพิ่ม/ลบ Schema โปรโตคอล
+        generateValue: true

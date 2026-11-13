@@ -14,3 +14,8 @@ build/
 # ข้อมูลผู้ใช้ (บัญชี รหัสผ่านที่แฮชแล้ว ประวัติการฝึก) ห้ามขึ้น Git / ห้ามแจกไปกับแอป
 users.json
 attempts.json
+
+# ฐานข้อมูล SQLite ในเครื่อง (บนเว็บจริงใช้ Postgres ผ่าน DATABASE_URL)
+app.db
+app.db-journal
+.env

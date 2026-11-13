@@ -1,5 +1,6 @@
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, model_validator
 from typing import Dict, List, Literal, Optional
 import json
@@ -9,6 +10,7 @@ from protocol_sdk.client import ProtocolClient
 import threading
 
 from auth_service import AuthError, AuthService
+from db import Database
 from encoder_service import EncoderService, list_serial_ports
 from tissue_model import TissueResistanceModel
 
@@ -19,6 +21,7 @@ app = FastAPI(
 )
 
 # อนุญาตให้ UI (ที่เสิร์ฟจาก Flask :5000 หรือเปิดไฟล์ตรงๆ) ยิง request ข้าม origin มาที่ backend นี้ได้
+EXTRA_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -27,6 +30,7 @@ app.add_middleware(
         "http://localhost:8000",
         "http://127.0.0.1:8000",
         "null",  # กรณีเปิด index.html จากไฟล์โดยตรง (file://)
+        *EXTRA_ORIGINS,
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,57 +38,28 @@ app.add_middleware(
 
 DB_FILE = "protocols.json"
 SESSIONS_FILE = "sessions.json"
-ATTEMPTS_FILE = "attempts.json"  # ผลการจำลองแต่ละครั้ง (ใช้แสดงในหน้า History)
 
-def load_db() -> Dict[str, dict]:
-    if os.path.exists(DB_FILE):
-        with open(DB_FILE, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return {}
-    return {}
-
-def save_db(data: Dict[str, dict]):
-    with open(DB_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-def load_sessions() -> List[dict]:
-    if os.path.exists(SESSIONS_FILE):
-        with open(SESSIONS_FILE, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return []
-    return []
-
-def save_sessions(data: List[dict]):
-    with open(SESSIONS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-def load_attempts() -> List[dict]:
-    if os.path.exists(ATTEMPTS_FILE):
-        with open(ATTEMPTS_FILE, "r", encoding="utf-8") as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return []
-    return []
-
-def save_attempts(data: List[dict]):
-    with open(ATTEMPTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
-
-# โหลดข้อมูลจากไฟล์ JSON ทันทีที่เซิร์ฟเวอร์เริ่มทำงาน
-attempts_db: List[dict] = load_attempts()
+# Schema/session ของโปรโตคอลยังเก็บเป็นไฟล์ JSON (protocols.json อยู่ใน Git อยู่แล้ว ส่วน sessions.json เป็นแค่ log ชั่วคราว)
 protocols_db: Dict[str, dict] = load_db()
 sessions_db: List[dict] = load_sessions()
 
 # ใช้ SDK สำหรับ decode/encode โดยอ่าน Schema จาก protocols_db ในหน่วยความจำ (ไม่ยิง HTTP กลับมาที่ตัวเอง)
 sdk_client = ProtocolClient()
 
-# บัญชีผู้ใช้ (ล็อกอิน) เก็บใน users.json: ประวัติ /attempts แยกตามผู้ใช้
-auth = AuthService()
+# ข้อมูลที่ต้องอยู่ถาวร (บัญชีผู้ใช้ + ประวัติ /attempts) เก็บในฐานข้อมูล:
+# ตั้ง DATABASE_URL = PostgreSQL บนคลาวด์ / ไม่ตั้ง = SQLite ไฟล์ app.db ในเครื่อง
+database = Database()
+auth = AuthService(database)
+
+# คีย์ผู้ดูแล: ถ้าตั้ง ADMIN_KEY ไว้ การเพิ่ม/ลบ Schema (POST/DELETE /protocols) ต้องส่ง header X-Admin-Key
+# (กันคนแปลกหน้าลบโปรโตคอลบนเว็บสาธารณะ) ไม่ตั้ง = ไม่ตรวจ (ใช้ในเครื่อง)
+ADMIN_KEY = os.environ.get("ADMIN_KEY", "")
+
+def require_admin(x_admin_key: Optional[str] = Header(default=None)):
+    if ADMIN_KEY and x_admin_key != ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="ต้องใช้คีย์ผู้ดูแล")
+
+STATIC_INDEX = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "index.html")
 
 # อ่านเอนโค้ดเดอร์ + config สำหรับหน้า Settings (ไม่เปิดพอร์ตเองจนกว่าจะเรียก /encoder/connect)
 encoder_service = EncoderService()
@@ -162,9 +137,16 @@ def schema_to_dict(schema: ProtocolSchema) -> dict:
 
 @app.get("/")
 def read_root():
+    """เสิร์ฟหน้าเว็บ (static/index.html) จากโดเมนเดียวกับ API; ถ้าไม่มีไฟล์ก็ตอบสถานะ"""
+    if os.path.exists(STATIC_INDEX):
+        return FileResponse(STATIC_INDEX)
     return {"status": "online", "message": "Protocol Schema API Ready"}
 
-@app.post("/protocols")
+@app.get("/health")
+def health():
+    return {"status": "online"}
+
+@app.post("/protocols", dependencies=[Depends(require_admin)])
 def save_protocol(schema: ProtocolSchema):
     protocols_db[schema.protocol_id] = schema_to_dict(schema)
     save_db(protocols_db)  # บันทึกลงไฟล์ protocols.json ถาวร
@@ -180,7 +162,7 @@ def get_protocol(protocol_id: str):
         raise HTTPException(status_code=404, detail="Protocol not found")
     return protocols_db[protocol_id]
 
-@app.delete("/protocols/{protocol_id}")
+@app.delete("/protocols/{protocol_id}", dependencies=[Depends(require_admin)])
 def delete_protocol(protocol_id: str):
     if protocol_id not in protocols_db:
         raise HTTPException(status_code=404, detail="Protocol not found")
@@ -300,9 +282,17 @@ def encoder_disconnect():
 # =========================================================================
 # บัญชีผู้ใช้: สมัคร / ล็อกอิน / ออกจากระบบ (ใช้ Bearer token ใน header Authorization)
 # =========================================================================
-class Credentials(BaseModel):
+class RegisterBody(BaseModel):
+    email: str = Field(max_length=254)
     username: str = Field(max_length=64)
     password: str = Field(max_length=256)
+
+class LoginBody(BaseModel):
+    login: str = Field(max_length=254)          # อีเมล หรือชื่อผู้ใช้
+    password: str = Field(max_length=256)
+
+def _auth_http_error(err: AuthError) -> HTTPException:
+    return HTTPException(status_code=err.status, detail={"code": err.code, "message": str(err)})
 
 def _bearer(authorization: Optional[str]) -> Optional[str]:
     if authorization and authorization.lower().startswith("bearer "):
@@ -317,18 +307,18 @@ def current_user(authorization: Optional[str] = Header(default=None)) -> str:
     return user
 
 @app.post("/auth/register")
-def auth_register(body: Credentials):
+def auth_register(body: RegisterBody):
     try:
-        return auth.register(body.username, body.password)
+        return auth.register(body.email, body.username, body.password)
     except AuthError as err:
-        raise HTTPException(status_code=err.status, detail=str(err))
+        raise _auth_http_error(err)
 
 @app.post("/auth/login")
-def auth_login(body: Credentials):
+def auth_login(body: LoginBody):
     try:
-        return auth.login(body.username, body.password)
+        return auth.login(body.login, body.password)
     except AuthError as err:
-        raise HTTPException(status_code=err.status, detail=str(err))
+        raise _auth_http_error(err)
 
 @app.post("/auth/logout")
 def auth_logout(authorization: Optional[str] = Header(default=None)):
@@ -355,14 +345,18 @@ class AttemptIn(BaseModel):
 
 @app.post("/attempts")
 def save_attempt(body: AttemptIn, user: str = Depends(current_user)):
-    attempts_db.append({**body.model_dump(), "user": user})  # ผูกผลกับเจ้าของบัญชี
-    save_attempts(attempts_db)
-    return {"ok": True, "count": sum(1 for a in attempts_db if a.get("user") == user)}
+    database.execute(  # ผูกผลกับเจ้าของบัญชี เก็บถาวรในฐานข้อมูล
+        "INSERT INTO attempts (user_id, data) VALUES (?, ?)",
+        (user, json.dumps(body.model_dump(), ensure_ascii=False)),
+    )
+    count = database.query_one("SELECT COUNT(*) FROM attempts WHERE user_id = ?", (user,))[0]
+    return {"ok": True, "count": count}
 
 @app.get("/attempts")
 def list_attempts(user: str = Depends(current_user)):
-    """ส่งเฉพาะผลของผู้ใช้ที่ล็อกอินอยู่ (ผลเก่าที่ไม่มีเจ้าของจะไม่ถูกส่งให้ใคร)"""
-    return [{k: v for k, v in a.items() if k != "user"} for a in attempts_db if a.get("user") == user]
+    """ส่งเฉพาะผลของผู้ใช้ที่ล็อกอินอยู่ (เรียงตามลำดับที่บันทึก)"""
+    rows = database.query("SELECT data FROM attempts WHERE user_id = ? ORDER BY id", (user,))
+    return [json.loads(r[0]) for r in rows]
 
 @app.get("/simulation/pose")
 def simulation_pose():

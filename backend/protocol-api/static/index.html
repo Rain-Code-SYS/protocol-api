@@ -316,7 +316,8 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
     <button type="button" class="alt auth-lang" id="aLang">EN</button>
     <h1 id="authTitle">Sign in</h1>
     <p class="auth-sub" data-i18n="aSub">Your history and progress are saved to your own account</p>
-    <label><span data-i18n="aUser">Username</span><input id="aUser" autocomplete="username" maxlength="32" autocapitalize="none" spellcheck="false"></label>
+    <label><span id="aEmailLbl" data-i18n="aEmail">Email</span><input id="aEmail" type="text" inputmode="email" autocomplete="email" maxlength="254" autocapitalize="none" spellcheck="false"></label>
+    <label id="aUserRow" hidden><span data-i18n="aUser">Username</span><input id="aUser" autocomplete="username" maxlength="32" autocapitalize="none" spellcheck="false"></label>
     <label><span data-i18n="aPass">Password</span><input id="aPass" type="password" autocomplete="current-password" maxlength="128"></label>
     <label id="aPass2Row" hidden><span data-i18n="aPass2">Confirm password</span><input id="aPass2" type="password" autocomplete="new-password" maxlength="128"></label>
     <div class="auth-msg" id="aMsg" role="alert"></div>
@@ -555,7 +556,8 @@ function render(){
 }
 
 // Sends the INT straight to the FastAPI backend (main.py on :8000)
-const API_BASE = 'http://localhost:8000';
+// เสิร์ฟจาก FastAPI เอง (เว็บจริง) -> ใช้โดเมนเดียวกัน; เปิดผ่าน Flask :5000 หรือไฟล์ตรงๆ -> ชี้ไป backend ในเครื่อง
+const API_BASE = (location.protocol === 'file:' || location.port === '5000') ? 'http://localhost:8000' : '';
 async function sendTrig1(value){
   const res = await fetch(`${API_BASE}/protocols/trig_protocol_1/ingest`, {
     method: 'POST',
@@ -590,7 +592,7 @@ $('cancel').addEventListener('click', () => {
 render();
 // ---- Settings: language + theme (saved in this browser) ----
 const I18N = {
- en:{cSoon:'Coming soon',aSub:'Your history and progress are saved to your own account',aUser:'Username',aPass:'Password',aPass2:'Confirm password',aLogin:'Sign in',aReg:'Create account',aToReg:'No account? Create one',aToLogin:'Already have an account? Sign in',aLogout:'Sign out',aAs:'Signed in as',aBad:'Wrong username or password',aTaken:'This username is already taken',aLocked:'Too many wrong attempts. Wait a moment and try again',aUserErr:'Username: 3–32 characters, only letters, numbers, _ . -',aPassErr:'Password must be at least 6 characters',aMismatch:'Passwords do not match',aExpired:'Session expired, please sign in again',aWait:'Connecting to the backend…',aBusy:'Please wait…',home:'Home',dash:'Dashboard',hist:'History',mods:'Modules',sett:'Settings',prof:'Student Profile',soon:'Not available yet',
+ en:{cSoon:'Coming soon',aSub:'Your history and progress are saved to your own account',aEmail:'Email',aLoginId:'Email or username',aEmailErr:'Please enter a valid email address',aEmailTaken:'This email is already registered. Please sign in instead',aUser:'Username (display name)',aPass:'Password',aPass2:'Confirm password',aLogin:'Sign in',aReg:'Create account',aToReg:'No account? Create one',aToLogin:'Already have an account? Sign in',aLogout:'Sign out',aAs:'Signed in as',aBad:'Wrong email/username or password',aTaken:'This username is already taken. Please choose another',aLocked:'Too many wrong attempts. Wait a moment and try again',aUserErr:'Username: 3–32 characters, only letters, numbers, _ . -',aPassErr:'Password must be at least 6 characters',aMismatch:'Passwords do not match',aExpired:'Session expired, please sign in again',aWait:'Connecting to the backend…',aBusy:'Please wait…',home:'Home',dash:'Dashboard',hist:'History',mods:'Modules',sett:'Settings',prof:'Student Profile',soon:'Not available yet',
   dTitle:'Select Training Modules',dSub:'Select a procedure, then press Start Modules',lvlMid:'Intermediate',lvlAdv:'Advanced',go:'Start Modules →',
   d1a:'Pleural space drainage',d1b:'and chest tube insertion',d2a:'Peritoneal fluid aspiration',d2b:'and patient prep',d3a:'Pericardial fluid aspiration',d3b:'and needle placement',
   crumb:'› Simulation setup',crumbT:'Simulation Setup',cfg:'Case configuration',age:'Patient age',ped:'Pediatric',adu:'Adult',ger:'Geriatric',
@@ -602,7 +604,7 @@ const I18N = {
   thMode:'Training mode',thScore:'Score',thAct:'Actions',demo:'Sample data, for layout preview only',pass:'Pass: score ≥',noData:'No data yet',
   emptyRows:'No training sessions yet. Completed sessions will appear here.',week:'Week',view:'View',viewT:'Session details are not built yet',mU:'m',sU:'s',
   sTitle:'Settings',sTheme:'Appearance',thSys:'Use device setting',thLight:'Light',thDark:'Dark',thHint:'Use device setting follows your computer’s light or dark mode.',sLang:'Language',eTitle:'Encoder & mechanism monitor',eHint:'Needs the FastAPI backend (main.py). Only one program can open the serial port, so close serial_bridge or the debugger before connecting. Set Zero while the needle is parallel to the ground; it is saved immediately.',ePort:'Port',eNoBytes:'Nothing received from this port. Check that it is the STM32’s port (not another COM), the baud rate is 230400, and the firmware is sending.',eBadLines:'Receiving lines but cannot read them (expected timestamp;enc1;enc2;enc3). Last line:',eLost:'Data stopped arriving. Check the cable and the board.',ePortPick:'Select port',eNoPort:'No serial port found',ePortRefresh:'Refresh ports',ePortNone:'Select a port first',eConnect:'Connect',eDisc:'Disconnect',eConnecting:'Connecting…',eOn:'Connected',eStale:'Connected, no data yet',eOff:'Not connected',eApiErr:'Cannot reach the backend (is main.py running on :8000?)',eJoint:'Joint',eEnc:'Encoder',eAct:'Action',eLive:'Live net (raw)',eZero:'Set Zero',eSave:'Save encoder settings',eSaved:'Encoder settings saved',eZeroed:'Zeroed at',ePprErr:'PPR must be a whole number, 1 or more',eYaw:'Yaw (Z)',ePitch:'Pitch (Y)',eSlider:'Slider',eIso:'Isometric',eTop:'Top (XY)',eSide:'Side (XZ)',simTitle:'Simulation',simExit:'Exit',simPerf:'Performance & Suggestions',simAngle:'Insert angle score',simTilt:'Tilt from perpendicular',simDepth:'Needle depth',simReset:'Reset attempt',simIdle:'Hold the needle perpendicular to the skin',simAligned:'Perpendicular – ready to insert',simIn:'Inserting…',simOk:'Success – needle in the pleural space',simFail:'Failed – needle hit the lung',simOff:'Encoder not streaming: connect it in Settings',simApi:'Cannot reach the backend (main.py :8000)',simSaved:'Result saved to History',simSaveErr:'Could not save the result',tbTitle:'Toolbar',tPointer:'Pointer',tOrbit:'Camera Orbit',tZoom:'Zoom',tNeedle:'Needle',tLayers:'Layers',tMeasure:'Measure',tZone:'Highlight',tUndo:'Undo',tRedo:'Redo',lSkin:'Skin',lRibs:'Ribs',lLungs:'Lungs',setTitle:'Settings',sSfx:'SFX On/Off',sFf:'Force Feedback',sDiff:'Difficulty',dEasy:'Easy',dMed:'Medium',dHard:'Hard',mPleura:'to pleura',mLung:'to lung',simNo3d:'3D view needs three.js (internet connection to cdnjs.cloudflare.com)',simOffSite:'Choose the puncture point in the 4th–6th intercostal space, anterior to the mid-axillary line (press Highlight to see the zone)',simWrongSite:'Failed – wrong site (use the 4th–6th intercostal space, anterior to the mid-axillary line)',simPickHint:'Pointer: click in the 4th–6th intercostal space, anterior to the mid-axillary line (press Highlight to see the zone)',rateLbl:'Success Rate',accLbl:'Session accuracy',simHist:'History & Analytics',spGood:'Steady',spPractice:'Needs practice',simLungLbl:'Avoid lung',simSpeedLbl:'Steady insertion speed',simFromLast:'from last attempt'},
- th:{cSoon:'เร็วๆ นี้',aSub:'ประวัติและพัฒนาการของคุณจะถูกเก็บไว้ในบัญชีของคุณเอง',aUser:'ชื่อผู้ใช้',aPass:'รหัสผ่าน',aPass2:'ยืนยันรหัสผ่าน',aLogin:'เข้าสู่ระบบ',aReg:'สมัครสมาชิก',aToReg:'ยังไม่มีบัญชี? สมัครสมาชิก',aToLogin:'มีบัญชีแล้ว? เข้าสู่ระบบ',aLogout:'ออกจากระบบ',aAs:'เข้าสู่ระบบเป็น',aBad:'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',aTaken:'ชื่อผู้ใช้นี้ถูกใช้แล้ว',aLocked:'ใส่รหัสผ่านผิดหลายครั้ง รอสักครู่แล้วลองใหม่',aUserErr:'ชื่อผู้ใช้ 3–32 ตัว ใช้ได้เฉพาะ a-z 0-9 _ . -',aPassErr:'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',aMismatch:'รหัสผ่านไม่ตรงกัน',aExpired:'หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบอีกครั้ง',aWait:'กำลังเชื่อมต่อ backend…',aBusy:'กรุณารอสักครู่…',home:'หน้าแรก',dash:'แดชบอร์ด',hist:'ประวัติ',mods:'โมดูล',sett:'การตั้งค่า',prof:'โปรไฟล์ผู้เรียน',soon:'ยังไม่เปิดให้ใช้งาน',
+ th:{cSoon:'เร็วๆ นี้',aSub:'ประวัติและพัฒนาการของคุณจะถูกเก็บไว้ในบัญชีของคุณเอง',aEmail:'อีเมล',aLoginId:'อีเมลหรือชื่อผู้ใช้',aEmailErr:'กรุณากรอกอีเมลให้ถูกต้อง',aEmailTaken:'อีเมลนี้สมัครไว้แล้ว กรุณาเข้าสู่ระบบแทน',aUser:'ชื่อผู้ใช้ (ชื่อที่แสดง)',aPass:'รหัสผ่าน',aPass2:'ยืนยันรหัสผ่าน',aLogin:'เข้าสู่ระบบ',aReg:'สมัครสมาชิก',aToReg:'ยังไม่มีบัญชี? สมัครสมาชิก',aToLogin:'มีบัญชีแล้ว? เข้าสู่ระบบ',aLogout:'ออกจากระบบ',aAs:'เข้าสู่ระบบเป็น',aBad:'อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง',aTaken:'ชื่อผู้ใช้นี้ถูกใช้แล้ว กรุณาเลือกชื่ออื่น',aLocked:'ใส่รหัสผ่านผิดหลายครั้ง รอสักครู่แล้วลองใหม่',aUserErr:'ชื่อผู้ใช้ 3–32 ตัว ใช้ได้เฉพาะ a-z 0-9 _ . -',aPassErr:'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',aMismatch:'รหัสผ่านไม่ตรงกัน',aExpired:'หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบอีกครั้ง',aWait:'กำลังเชื่อมต่อ backend…',aBusy:'กรุณารอสักครู่…',home:'หน้าแรก',dash:'แดชบอร์ด',hist:'ประวัติ',mods:'โมดูล',sett:'การตั้งค่า',prof:'โปรไฟล์ผู้เรียน',soon:'ยังไม่เปิดให้ใช้งาน',
   dTitle:'เลือกโมดูลการฝึก',dSub:'เลือกหัตถการ แล้วกดปุ่ม “เริ่มโมดูล”',lvlMid:'ระดับกลาง',lvlAdv:'ระดับสูง',go:'เริ่มโมดูล →',
   d1a:'การระบายของเหลวในช่องเยื่อหุ้มปอด',d1b:'และการใส่ท่อระบายทรวงอก',d2a:'การเจาะดูดน้ำในช่องท้อง',d2b:'และการเตรียมผู้ป่วย',d3a:'การเจาะดูดน้ำในเยื่อหุ้มหัวใจ',d3b:'และการวางตำแหน่งเข็ม',
   crumb:'› ตั้งค่าการจำลอง',crumbT:'ตั้งค่าการจำลอง',cfg:'ตั้งค่าเคส',age:'อายุผู้ป่วย',ped:'เด็ก',adu:'ผู้ใหญ่',ger:'ผู้สูงอายุ',
@@ -682,8 +684,10 @@ async function encApi(path, method, body){
   const data = await res.json().catch(() => ({}));
   if (res.status === 401 && authToken && !path.startsWith('/auth/')) authExpired();   // token หมดอายุ/ถูกเพิกถอน
   if (!res.ok) {
-    const err = new Error(typeof data.detail === 'string' ? data.detail : 'HTTP ' + res.status);
+    const d = data.detail;
+    const err = new Error(typeof d === 'string' ? d : (d && d.message) ? d.message : 'HTTP ' + res.status);
     err.status = res.status;
+    if (d && typeof d === 'object') err.code = d.code;
     throw err;
   }
   return data;
@@ -1357,6 +1361,8 @@ function authRender(){
   $('aGo').textContent = t(reg ? 'aReg' : 'aLogin');
   $('aSwitch').textContent = t(reg ? 'aToLogin' : 'aToReg');
   $('aPass2Row').hidden = !reg;
+  $('aUserRow').hidden = !reg;
+  $('aEmailLbl').textContent = t(reg ? 'aEmail' : 'aLoginId');
   $('aPass').autocomplete = reg ? 'new-password' : 'current-password';
   $('aLang').textContent = prefs.lang === 'th' ? 'EN' : 'ไทย';
   $('profName').textContent = authToken && authUser ? authUser : t('prof');
@@ -1369,7 +1375,7 @@ function authShow(msg, mode){
   $('auth').hidden = false;
   authMsg(msg);
   authRender();
-  setTimeout(() => $('aUser').focus(), 0);
+  setTimeout(() => $('aEmail').focus(), 0);
 }
 function authReset(){   // ล้างข้อมูลของผู้ใช้คนก่อนออกจากหน้าจอ (ประวัติ/คะแนนรอบนี้)
   historyData = [];
@@ -1386,21 +1392,22 @@ function authExpired(){
 $('authForm').addEventListener('submit', async e => {
   e.preventDefault();
   if (authBusy) return;
-  const username = $('aUser').value.trim(), password = $('aPass').value, reg = authMode === 'reg';
+  const email = $('aEmail').value.trim(), username = $('aUser').value.trim(), password = $('aPass').value, reg = authMode === 'reg';
   if (reg) {
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email) || email.length > 254) return authMsg('aEmailErr');
     if (!/^[A-Za-z0-9_.-]{3,32}$/.test(username)) return authMsg('aUserErr');
     if (password.length < 6) return authMsg('aPassErr');
     if (password !== $('aPass2').value) return authMsg('aMismatch');
-  } else if (!username || !password) return authMsg('aBad');
+  } else if (!email || !password) return authMsg('aBad');
   authBusy = true; $('aGo').disabled = true; authMsg('aBusy');
   try {
-    const r = await encApi(reg ? '/auth/register' : '/auth/login', 'POST', {username, password});
+    const r = await encApi(reg ? '/auth/register' : '/auth/login', 'POST', reg ? {email, username, password} : {login: email, password});
     authToken = r.token; authUser = r.username; authStore();
-    $('aPass').value = $('aPass2').value = '';
+    $('aPass').value = $('aPass2').value = $('aUser').value = $('aEmail').value = '';
     authMsg(''); $('auth').hidden = true; authMode = 'login';
     authReset(); histLoad();
   } catch (err) {
-    authMsg(err.status === 401 ? 'aBad' : err.status === 409 ? 'aTaken' : err.status === 429 ? 'aLocked'
+    authMsg(err.status === 401 ? 'aBad' : err.code === 'email_taken' ? 'aEmailTaken' : err.status === 409 ? 'aTaken' : err.code === 'bad_email' ? 'aEmailErr' : err.status === 429 ? 'aLocked'
       : err.status ? '' : 'eApiErr', err.message);
   } finally { authBusy = false; $('aGo').disabled = false; }
 });
