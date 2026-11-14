@@ -1393,10 +1393,7 @@ function simStep(){
   if (!simPose) return;
   const d = simDerive(simPose), now = performance.now(), P = simPose;
   let r = simRun;
-  if (r.done) {   // จบรอบแล้ว (ดึงเข็มออก): Easy/Medium แทงใหม่ = เริ่มรอบใหม่เอง | Hard และ Tutorial ต้องกดปุ่มทำอีกครั้ง
-    if (d.x > 0 && simDiff < 2 && !simTut()) { simNewRound(); r = simRun; $('simNote').textContent = ''; }
-    else return;
-  }
+  if (r.done) return;   // จบรอบแล้ว (ดึงเข็มออก): ทุกโหมดต้องกดปุ่ม ทำอีกครั้ง ถึงจะเริ่มรอบใหม่
   if (!r.armed) return;   // Tutorial: ต้องทวนขั้นตอนก่อนทำหัตถการแล้วกดพร้อมก่อน
   const before = r.phase;
   if (d.x <= 0 && r.phase !== 'idle') {   // ถอยเข็มพ้นผิว = จบรอบ บันทึกผล (ถ้ายังไม่ถึงเยื่อหุ้มปอดนับเป็นไม่สำเร็จ)
@@ -1554,7 +1551,7 @@ function simUi(d){
   if (box._fb !== fb || box._key !== key) {
     box._fb = fb; box._key = key;
     box.innerHTML = fb ? '<h3>' + t('fbTitle') + ' · ' + fb.score + '%</h3>' + fb.issues.map(i => '<div class="fbi ' + i.s + '">' + esc(tfmt(i.k, ...i.a)) + '</div>').join('') +
-      (r.done && (simDiff === 2 || simTut()) ? '<div class="fbn">' + t('fbRetry') + '</div>' : '') : '';
+      (r.done ? '<div class="fbn">' + t('fbRetry') + '</div>' : '') : '';
   }
   if (!p || !d) {
     $('simScore').textContent = '–'; $('simTilt').textContent = '–'; $('simMtx').textContent = ''; $('simZoneNote').textContent = '';
