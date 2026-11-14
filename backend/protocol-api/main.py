@@ -400,6 +400,7 @@ class AttemptIn(BaseModel):
     angle: int = Field(ge=0, le=100)            # คะแนนมุมแทง ณ ตอนเข็มแตะผิว
     depth_mm: float
     force_feedback: bool = False
+    issues: List[str] = Field(default_factory=list)   # รหัสข้อผิดพลาด/ข้อแนะนำของรอบนี้ เช่น iTilt, iLung, iTime
 
 @app.post("/attempts")
 def save_attempt(body: AttemptIn, user: str = Depends(current_user)):

@@ -292,6 +292,27 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
 .mod.soon{opacity:.55;cursor:not-allowed}
 .mod.soon:hover{transform:none;border-color:var(--line)}
 .mod.soon .go{cursor:not-allowed}
+/* ---- กติกาโหมด: ผลตอบรับ / โค้ช Tutorial / ทัวร์ ---- */
+.sim-perf [hidden],.sim-stage [hidden]{display:none!important}
+.pills label.dis{opacity:.45;cursor:not-allowed}.pills label.dis span{pointer-events:none}
+.sim-zn{font-size:.78rem;color:#4a6683;padding:2px 0 0}
+.sim-fb{background:#fff;border:1px solid #d3e0ee;border-radius:10px;padding:8px 10px;margin:8px 0}
+.sim-fb h3{margin:0 0 6px;font-size:.95rem}
+.sim-fb .fbi{font-size:.82rem;line-height:1.35;padding:5px 8px;margin:4px 0;border-radius:8px;border-left:4px solid}
+.sim-fb .fbi.bad{background:#fbdcdc;color:#7a1c1c;border-color:#d23b3b}.sim-fb .fbi.warn{background:#fdebc8;color:#6b4500;border-color:#f0b44c}.sim-fb .fbi.ok{background:#d6f3e0;color:#0e5a2b;border-color:#1a9c4b}
+.sim-fb .fbn{font-size:.8rem;margin-top:6px;color:#4a6683}
+.sim-coach{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(440px,calc(100% - 680px));min-width:300px;padding:16px 18px;border-radius:14px;background:rgba(240,247,255,.97);color:#17324a;box-shadow:0 8px 30px rgba(0,0,0,.4);z-index:5}
+.sim-coach h3{margin:0 0 8px;font-size:1.05rem}.sim-coach ol{margin:0 0 8px;padding-left:20px;font-size:.88rem;line-height:1.4}.sim-coach li{margin:4px 0}
+.sim-coach .cnote{font-size:.76rem;color:#4a6683;margin:6px 0 10px}.sim-coach .cact{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.sim-coach .mini{color:#17324a;border-color:#9cc3f0}.sim-coach .mini.pri{color:#fff;border-color:var(--accent)}
+.sim-live{position:absolute;left:50%;top:92px;transform:translateX(-50%);max-width:min(560px,calc(100% - 700px));padding:8px 16px;border-radius:12px;background:rgba(240,247,255,.95);color:#17324a;font-size:.88rem;font-weight:600;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.25);pointer-events:none}
+.tour{position:fixed;inset:0;z-index:300}.tour[hidden]{display:none}
+.tour-hole{position:absolute;border-radius:12px;box-shadow:0 0 0 9999px rgba(5,12,24,.7),0 0 0 3px var(--accent);transition:left .2s,top .2s,width .2s,height .2s}
+.tour-card{position:absolute;width:min(380px,calc(100vw - 24px));padding:14px 16px;border-radius:14px;background:var(--card);color:var(--text);border:1px solid var(--line);box-shadow:0 12px 36px rgba(0,0,0,.45)}
+.tour-card b{display:block;font-size:1.05rem;margin-bottom:6px}.tour-card p{margin:0 0 12px;font-size:.9rem;line-height:1.45}
+.tour-act{display:flex;align-items:center;gap:8px}.tour-act span{margin-right:auto;font-size:.8rem;color:var(--muted)}
+.tour-btn{margin-left:auto;width:36px;height:36px;border-radius:50%;border:1.5px solid var(--line);background:transparent;color:var(--accent);font-weight:800;font-size:1.05rem;cursor:pointer}
+.tour-btn[hidden]{display:none}.tour-btn:not([hidden]) + .profile{margin-left:0}
 </style>
 </head>
 <body>
@@ -305,6 +326,7 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
     <a class="tab" href="#settings" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span data-i18n="sett">Settings</span></a>
   </nav>
   <div class="crumb" id="crumb" hidden><b id="procName">Thoracentesis</b> <span data-i18n="crumb">› Simulation setup</span></div>
+  <button type="button" class="tour-btn" id="tourBtn" data-i18n-title="tourBtn" hidden>?</button>
   <div class="profile" id="profile" role="button" tabindex="0" aria-haspopup="true"><span id="profName">Student Profile</span><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="currentColor" opacity=".2"/><circle cx="16" cy="12" r="5" fill="currentColor"/><path d="M6 27c1-6 5-8 10-8s9 2 10 8z" fill="currentColor"/></svg></div>
 <div class="pmenu" id="pmenu" hidden>
   <div class="pm-as"><span data-i18n="aAs">Signed in as</span> <b id="pmUser"></b></div>
@@ -376,7 +398,7 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
       <legend data-i18n="kase">Case type</legend>
       <div class="pills">
         <label><input type="radio" name="kase" value="0" checked><span data-i18n="basic">Basic</span></label>
-        <label><input type="radio" name="kase" value="1"><span data-i18n="emer">Emergency / Trauma</span></label>
+        <label data-i18n-title="emerHint"><input type="radio" name="kase" value="1"><span data-i18n="emer">Emergency / Trauma</span></label>
       </div>
     </fieldset>
   </div>
@@ -424,17 +446,21 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
         <h2 data-i18n="simPerf">Performance &amp; Suggestions</h2>
         <div class="pbox"><div data-i18n="rateLbl">Success Rate</div><div class="pbig" id="simRate">&ndash;</div><span class="sim-chip ok" id="simDelta" hidden></span></div>
         <div class="pbox"><div class="prow"><span data-i18n="accLbl">Session accuracy</span><b id="simAcc">&ndash;</b></div><div id="simSpark"></div></div>
-        <div class="pbox">
+        <div class="pbox" id="simAids">
           <div class="prow"><span data-i18n="simAngle">Insert angle score</span><i class="sim-badge simMode"></i><b id="simScore">&ndash;</b></div>
           <div class="prow"><span data-i18n="simLungLbl">Avoid lung</span><i class="sim-badge simMode"></i><b id="simLung">&ndash;</b></div>
           <div class="prow"><span data-i18n="simSpeedLbl">Steady insertion speed</span><i class="sim-badge simMode"></i><b id="simSpeed">&ndash;</b></div>
+          <div class="sim-zn" id="simZoneNote"></div>
         </div>
         <div class="sim-chip" id="simChip"></div>
-        <div class="sim-row"><span data-i18n="simTilt">Tilt from perpendicular</span><b id="simTilt">&ndash;</b></div>
-        <div class="sim-row"><span data-i18n="simDepth">Needle depth</span><b id="simDepth">&ndash;</b></div>
+        <div class="sim-fb" id="simFb" hidden></div>
+        <div class="sim-row" id="simTimeRow" hidden><span id="simTimeLbl" data-i18n="simTimeLbl">Time</span><b id="simTime">&ndash;</b></div>
+        <div class="sim-row" id="simTiltRow"><span data-i18n="simTilt">Tilt from perpendicular</span><b id="simTilt">&ndash;</b></div>
         <div class="actions"><span class="status" id="simNote"></span><button type="button" class="mini pri" id="simReset" data-i18n="simReset">Reset attempt</button></div>
       </div>
       <div class="sim-hint" id="simHint"></div><div class="sim-mtx" id="simMtx"></div>
+      <div class="sim-live" id="simLive" hidden></div>
+      <div class="sim-coach" id="simCoach" hidden><h3 id="coachTitle"></h3><ol id="coachList"></ol><p class="cnote" id="coachNote"></p><div class="cact"><button type="button" class="mini" id="coachTour"></button><button type="button" class="mini pri" id="coachGo"></button></div></div>
       <button type="button" class="sim-fs" id="simFs" title="Fullscreen">&#9974;</button>
       <div class="sim-tools" id="simTools"><b data-i18n="tbTitle">Toolbar</b>
         <div class="tg">
@@ -532,6 +558,8 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
   </section>
 </main>
 
+<div class="tour" id="tour" hidden><div class="tour-hole" id="tourHole"></div><div class="tour-card" id="tourCard" role="dialog" aria-live="polite"><b id="tourTitle"></b><p id="tourText"></p><div class="tour-act"><span id="tourCount"></span><button type="button" class="mini" id="tourSkip"></button><button type="button" class="mini" id="tourBack"></button><button type="button" class="mini pri" id="tourNext"></button></div></div></div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="/static/haptic_model.js"></script>
 <script>
@@ -550,6 +578,9 @@ function encode(){
 }
 
 function render(){
+  if (state.diff !== 2 && state.kase) state.kase = 0;   // Emergency / Trauma เลือกได้เฉพาะความยาก Hard
+  const em = document.querySelector('input[name="kase"][value="1"]');
+  em.disabled = state.diff !== 2; em.parentElement.classList.toggle('dis', em.disabled);
   for (const k of ORDER){
     document.querySelector('input[name="'+k+'"][value="'+state[k]+'"]').checked = true;
   }
@@ -605,7 +636,7 @@ const I18N = {
   kSucc:'Success rate',kTime:'Avg. session time',kAcc:'Overall accuracy',kLat:'Latest score',past:'Past training sessions',thDate:'Date',thProc:'Procedure',
   thMode:'Training mode',thScore:'Score',thAct:'Actions',demo:'Sample data, for layout preview only',pass:'Pass: score ≥',noData:'No data yet',
   emptyRows:'No training sessions yet. Completed sessions will appear here.',week:'Week',view:'View',viewT:'Session details are not built yet',mU:'m',sU:'s',
-  sTitle:'Settings',sTheme:'Appearance',thSys:'Use device setting',thLight:'Light',thDark:'Dark',thHint:'Use device setting follows your computer’s light or dark mode.',sLang:'Language',eTitle:'Encoder & mechanism monitor',eHint:'Needs the FastAPI backend (main.py). Only one program can open the serial port, so close serial_bridge or the debugger before connecting. Set Zero while the needle is parallel to the ground; it is saved immediately.',ePort:'Port',eNoBytes:'Nothing received from this port. Check that it is the STM32’s port (not another COM), the baud rate is 230400, and the firmware is sending.',eBadLines:'Receiving lines but cannot read them (expected timestamp;enc1;enc2;enc3). Last line:',eLost:'Data stopped arriving. Check the cable and the board.',ePortPick:'Select port',eNoPort:'No serial port found',ePortRefresh:'Refresh ports',ePortNone:'Select a port first',eConnect:'Connect',eDisc:'Disconnect',eConnecting:'Connecting…',eOn:'Connected',eStale:'Connected, no data yet',eOff:'Not connected',eApiErr:'Cannot reach the backend (is main.py running on :8000?)',eJoint:'Joint',eEnc:'Encoder',eAct:'Action',eLive:'Live net (raw)',eZero:'Set Zero',eSave:'Save encoder settings',eSaved:'Encoder settings saved',eZeroed:'Zeroed at',ePprErr:'PPR must be a whole number, 1 or more',eYaw:'Yaw (Z)',ePitch:'Pitch (Y)',eSlider:'Slider',eIso:'Isometric',eTop:'Top (XY)',eSide:'Side (XZ)',simTitle:'Simulation',simExit:'Exit',simPerf:'Performance & Suggestions',simAngle:'Insert angle score',simTilt:'Tilt from perpendicular',simDepth:'Needle depth',simReset:'Reset attempt',simIdle:'Hold the needle perpendicular to the skin',simAligned:'Perpendicular – ready to insert',simIn:'Inserting…',simOk:'Success – needle in the pleural space',simFail:'Failed – needle hit the lung',simOff:'Encoder not streaming: connect it in Settings',simApi:'Cannot reach the backend (main.py :8000)',simSaved:'Result saved to History',simSaveErr:'Could not save the result',tbTitle:'Toolbar',tPointer:'Pointer',tOrbit:'Camera Orbit',tZoom:'Zoom',tNeedle:'Needle',tLayers:'Layers',tMeasure:'Measure',tZone:'Highlight',tUndo:'Undo',tRedo:'Redo',lSkin:'Skin',lRibs:'Ribs',lLungs:'Lungs',setTitle:'Settings',sSfx:'SFX On/Off',sFf:'Force Feedback',sDiff:'Difficulty',dEasy:'Easy',dMed:'Medium',dHard:'Hard',mPleura:'to pleura',mLung:'to lung',simNo3d:'3D view needs three.js (internet connection to cdnjs.cloudflare.com)',simOffSite:'Choose the puncture point in the 4th–6th intercostal space, anterior to the mid-axillary line (press Highlight to see the zone)',simWrongSite:'Failed – wrong site (use the 4th–6th intercostal space, anterior to the mid-axillary line)',simPickHint:'Pointer: click anywhere on the chest to choose the puncture point (press Highlight to see the correct zone \u2013 other points will fail)',rateLbl:'Success Rate',accLbl:'Session accuracy',simHist:'History & Analytics',spGood:'Steady',spPractice:'Needs practice',simLungLbl:'Avoid lung',simSpeedLbl:'Steady insertion speed',simFromLast:'from last attempt'},
+  sTitle:'Settings',sTheme:'Appearance',thSys:'Use device setting',thLight:'Light',thDark:'Dark',thHint:'Use device setting follows your computer’s light or dark mode.',sLang:'Language',eTitle:'Encoder & mechanism monitor',eHint:'Needs the FastAPI backend (main.py). Only one program can open the serial port, so close serial_bridge or the debugger before connecting. Set Zero while the needle is parallel to the ground; it is saved immediately.',ePort:'Port',eNoBytes:'Nothing received from this port. Check that it is the STM32’s port (not another COM), the baud rate is 230400, and the firmware is sending.',eBadLines:'Receiving lines but cannot read them (expected timestamp;enc1;enc2;enc3). Last line:',eLost:'Data stopped arriving. Check the cable and the board.',ePortPick:'Select port',eNoPort:'No serial port found',ePortRefresh:'Refresh ports',ePortNone:'Select a port first',eConnect:'Connect',eDisc:'Disconnect',eConnecting:'Connecting…',eOn:'Connected',eStale:'Connected, no data yet',eOff:'Not connected',eApiErr:'Cannot reach the backend (is main.py running on :8000?)',eJoint:'Joint',eEnc:'Encoder',eAct:'Action',eLive:'Live net (raw)',eZero:'Set Zero',eSave:'Save encoder settings',eSaved:'Encoder settings saved',eZeroed:'Zeroed at',ePprErr:'PPR must be a whole number, 1 or more',eYaw:'Yaw (Z)',ePitch:'Pitch (Y)',eSlider:'Slider',eIso:'Isometric',eTop:'Top (XY)',eSide:'Side (XZ)',simTitle:'Simulation',simExit:'Exit',simPerf:'Performance & Suggestions',simAngle:'Insert angle score',simTilt:'Tilt from perpendicular',simReset:'Reset attempt',simIdle:'Hold the needle perpendicular to the skin',simAligned:'Perpendicular – ready to insert',simIn:'Inserting…',simOk:'Success – needle in the pleural space',simFail:'Failed – needle hit the lung',simOff:'Encoder not streaming: connect it in Settings',simApi:'Cannot reach the backend (main.py :8000)',simSaved:'Result saved to History',simSaveErr:'Could not save the result',tbTitle:'Toolbar',tPointer:'Pointer',tOrbit:'Camera Orbit',tZoom:'Zoom',tNeedle:'Needle',tLayers:'Layers',tMeasure:'Measure',tZone:'Highlight',tUndo:'Undo',tRedo:'Redo',lSkin:'Skin',lRibs:'Ribs',lLungs:'Lungs',setTitle:'Settings',sSfx:'SFX On/Off',sFf:'Force Feedback',sDiff:'Difficulty',dEasy:'Easy',dMed:'Medium',dHard:'Hard',mPleura:'to pleura',mLung:'to lung',simNo3d:'3D view needs three.js (internet connection to cdnjs.cloudflare.com)',simOffSite:'Choose the puncture point in the 4th–6th intercostal space, anterior to the mid-axillary line (press Highlight to see the zone)',simWrongSite:'Failed – wrong site (use the 4th–6th intercostal space, anterior to the mid-axillary line)',simPickHint:'Pointer: click anywhere on the chest to choose the puncture point (press Highlight to see the correct zone \u2013 other points will fail)',rateLbl:'Success Rate',accLbl:'Session accuracy',simHist:'History & Analytics',spGood:'Steady',spPractice:'Needs practice',simLungLbl:'Avoid lung',simSpeedLbl:'Steady insertion speed',simFromLast:'from last attempt'},
  th:{cSoon:'เร็วๆ นี้',aSub:'ประวัติและพัฒนาการของคุณจะถูกเก็บไว้ในบัญชีของคุณเอง',eNoWebSerial:'เบราว์เซอร์นี้อ่านบอร์ดผ่าน USB ไม่ได้ กรุณาใช้ Chrome หรือ Edge บนคอมพิวเตอร์ (เว็บต้องเป็น HTTPS หรือ localhost)',eWsOpenErr:'เปิดพอร์ตไม่ได้ (อาจมีโปรแกรมอื่นใช้อยู่)',eWsLost:'การเชื่อมต่อ USB หลุด',simFfOn:'แรงสะท้อนกลับทำงาน',simFfNeed:'แรงสะท้อนกลับต้องเชื่อมต่อบอร์ดที่ Settings ก่อน',aEmail:'อีเมล',aLoginId:'อีเมลหรือชื่อผู้ใช้',aEmailErr:'กรุณากรอกอีเมลให้ถูกต้อง',aEmailTaken:'อีเมลนี้สมัครไว้แล้ว กรุณาเข้าสู่ระบบแทน',aUser:'ชื่อผู้ใช้ (ชื่อที่แสดง)',aPass:'รหัสผ่าน',aPass2:'ยืนยันรหัสผ่าน',aLogin:'เข้าสู่ระบบ',aReg:'สมัครสมาชิก',aToReg:'ยังไม่มีบัญชี? สมัครสมาชิก',aToLogin:'มีบัญชีแล้ว? เข้าสู่ระบบ',aLogout:'ออกจากระบบ',aAs:'เข้าสู่ระบบเป็น',aBad:'อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง',aTaken:'ชื่อผู้ใช้นี้ถูกใช้แล้ว กรุณาเลือกชื่ออื่น',aLocked:'ใส่รหัสผ่านผิดหลายครั้ง รอสักครู่แล้วลองใหม่',aUserErr:'ชื่อผู้ใช้ 3–32 ตัว ใช้ได้เฉพาะ a-z 0-9 _ . -',aPassErr:'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',aMismatch:'รหัสผ่านไม่ตรงกัน',aExpired:'หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบอีกครั้ง',aWait:'กำลังเชื่อมต่อ backend…',aBusy:'กรุณารอสักครู่…',home:'หน้าแรก',dash:'แดชบอร์ด',hist:'ประวัติ',mods:'โมดูล',sett:'การตั้งค่า',prof:'โปรไฟล์ผู้เรียน',soon:'ยังไม่เปิดให้ใช้งาน',
   dTitle:'เลือกโมดูลการฝึก',dSub:'เลือกหัตถการ แล้วกดปุ่ม “เริ่มโมดูล”',lvlMid:'ระดับกลาง',lvlAdv:'ระดับสูง',go:'เริ่มโมดูล →',
   d1a:'การระบายของเหลวในช่องเยื่อหุ้มปอด',d1b:'และการใส่ท่อระบายทรวงอก',d2a:'การเจาะดูดน้ำในช่องท้อง',d2b:'และการเตรียมผู้ป่วย',d3a:'การเจาะดูดน้ำในเยื่อหุ้มหัวใจ',d3b:'และการวางตำแหน่งเข็ม',
@@ -617,8 +648,108 @@ const I18N = {
   kSucc:'อัตราผ่านเกณฑ์',kTime:'เวลาฝึกเฉลี่ย',kAcc:'ความแม่นยำโดยรวม',kLat:'คะแนนล่าสุด',past:'ประวัติการฝึก',thDate:'วันที่',thProc:'หัตถการ',
   thMode:'โหมดการฝึก',thScore:'คะแนน',thAct:'การดำเนินการ',demo:'ข้อมูลตัวอย่างสำหรับดูหน้าตาเท่านั้น',pass:'ผ่านเมื่อคะแนน ≥',noData:'ยังไม่มีข้อมูล',
   emptyRows:'ยังไม่มีประวัติการฝึก เมื่อฝึกเสร็จแล้วรายการจะแสดงที่นี่',week:'สัปดาห์',view:'ดู',viewT:'ยังไม่มีหน้ารายละเอียดของแต่ละครั้ง',mU:' นาที',sU:' วินาที',
-  sTitle:'การตั้งค่า',sTheme:'ธีมการแสดงผล',thSys:'ตามอุปกรณ์',thLight:'สว่าง',thDark:'มืด',thHint:'“ตามอุปกรณ์” คือใช้โหมดสว่างหรือมืดตามที่ตั้งไว้ในเครื่องของคุณ',sLang:'ภาษา',eTitle:'เอนโค้ดเดอร์และภาพกลไก',eHint:'ต้องเปิด FastAPI backend (main.py) ไว้ และพอร์ต Serial เปิดได้ทีละโปรแกรม ให้ปิด serial_bridge หรือ debugger ก่อนกดเชื่อมต่อ ให้กด Set Zero ตอนแนวเข็มขนานกับพื้น ค่าจะถูกบันทึกทันที',ePort:'พอร์ต',eNoBytes:'ไม่ได้รับข้อมูลอะไรเลยจากพอร์ตนี้ ตรวจว่าเป็นพอร์ตของ STM32 (ไม่ใช่ COM อื่น) baud เป็น 230400 และเฟิร์มแวร์กำลังส่งข้อมูลอยู่',eBadLines:'ได้รับบรรทัดแล้วแต่อ่านไม่ออก (ต้องเป็น timestamp;enc1;enc2;enc3) บรรทัดล่าสุด:',eLost:'ข้อมูลหยุดมา ตรวจสายและบอร์ด',ePortPick:'เลือกพอร์ต',eNoPort:'ไม่พบพอร์ต Serial',ePortRefresh:'รีเฟรชรายชื่อพอร์ต',ePortNone:'เลือกพอร์ตก่อน',eConnect:'เชื่อมต่อ',eDisc:'ตัดการเชื่อมต่อ',eConnecting:'กำลังเชื่อมต่อ…',eOn:'เชื่อมต่อแล้ว',eStale:'เชื่อมต่อแล้ว แต่ยังไม่มีข้อมูล',eOff:'ยังไม่ได้เชื่อมต่อ',eApiErr:'เชื่อมต่อ backend ไม่ได้ (เปิด main.py ที่พอร์ต 8000 แล้วหรือยัง?)',eJoint:'ข้อต่อ',eEnc:'เอนโค้ดเดอร์',eAct:'การทำงาน',eLive:'ค่าสุทธิ (ดิบ)',eZero:'ตั้งศูนย์',eSave:'บันทึกค่าเอนโค้ดเดอร์',eSaved:'บันทึกค่าเอนโค้ดเดอร์แล้ว',eZeroed:'ตั้งศูนย์ที่',ePprErr:'PPR ต้องเป็นจำนวนเต็ม 1 ขึ้นไป',eYaw:'Yaw (Z)',ePitch:'Pitch (Y)',eSlider:'สไลเดอร์',eIso:'มุมเอียง',eTop:'มองจากบน (XY)',eSide:'มองจากข้าง (XZ)',simTitle:'หน้าจำลอง',simExit:'ออก',simPerf:'ผลการทำงานและคำแนะนำ',simAngle:'คะแนนมุมการแทง',simTilt:'เอียงจากแนวตั้งฉาก',simDepth:'ความลึกของเข็ม',simReset:'เริ่มใหม่',simIdle:'จัดเข็มให้ตั้งฉากกับผิวหนัง',simAligned:'ตั้งฉากแล้ว – เจาะได้',simIn:'กำลังเจาะ…',simOk:'สำเร็จ – เข็มเข้าช่องเยื่อหุ้มปอด',simFail:'ไม่สำเร็จ – เข็มโดนปอด',simOff:'ยังไม่มีสัญญาณเอนโค้ดเดอร์: ไปเชื่อมต่อที่ Settings',simApi:'เชื่อมต่อ backend ไม่ได้ (main.py :8000)',simSaved:'บันทึกผลลง History แล้ว',simSaveErr:'บันทึกผลไม่สำเร็จ',tbTitle:'แถบเครื่องมือ',tPointer:'ตัวชี้',tOrbit:'หมุนกล้อง',tZoom:'ซูม',tNeedle:'เข็ม',tLayers:'ชั้นกายวิภาค',tMeasure:'วัดระยะ',tZone:'ไฮไลต์',tUndo:'ย้อนกลับ',tRedo:'ทำซ้ำ',lSkin:'ผิวหนัง',lRibs:'ซี่โครง',lLungs:'ปอด',setTitle:'ตั้งค่า',sSfx:'เปิด/ปิดเสียง',sFf:'แรงสะท้อน',sDiff:'ความยาก',dEasy:'ง่าย',dMed:'ปานกลาง',dHard:'ยาก',mPleura:'ถึงเยื่อหุ้มปอด',mLung:'ถึงปอด',simNo3d:'ภาพ 3D ต้องโหลด three.js (ต้องต่ออินเทอร์เน็ตไปที่ cdnjs.cloudflare.com)',simOffSite:'เลือกจุดเจาะได้เฉพาะช่องซี่โครงที่ 4–6 ด้านหน้าเส้น mid-axillary line (กดปุ่มไฮไลต์เพื่อดูโซน)',simWrongSite:'ไม่สำเร็จ – ตำแหน่งเจาะผิด (ต้องเป็นช่องซี่โครงที่ 4–6 ด้านหน้าเส้น mid-axillary line)',simPickHint:'ตัวชี้: คลิกตรงไหนก็ได้ที่หน้าอกเพื่อเลือกจุดเจาะ (กดปุ่มไฮไลต์เพื่อดูโซนที่ถูกต้อง จุดอื่นจะไม่สำเร็จ)',rateLbl:'อัตราความสำเร็จ',accLbl:'ความแม่นยำในรอบนี้',simHist:'ประวัติและสถิติ',spGood:'สม่ำเสมอ',spPractice:'ต้องฝึกเพิ่ม',simLungLbl:'ไม่โดนปอด',simSpeedLbl:'ความเร็วการแทงสม่ำเสมอ',simFromLast:'จากครั้งก่อน'}
+  sTitle:'การตั้งค่า',sTheme:'ธีมการแสดงผล',thSys:'ตามอุปกรณ์',thLight:'สว่าง',thDark:'มืด',thHint:'“ตามอุปกรณ์” คือใช้โหมดสว่างหรือมืดตามที่ตั้งไว้ในเครื่องของคุณ',sLang:'ภาษา',eTitle:'เอนโค้ดเดอร์และภาพกลไก',eHint:'ต้องเปิด FastAPI backend (main.py) ไว้ และพอร์ต Serial เปิดได้ทีละโปรแกรม ให้ปิด serial_bridge หรือ debugger ก่อนกดเชื่อมต่อ ให้กด Set Zero ตอนแนวเข็มขนานกับพื้น ค่าจะถูกบันทึกทันที',ePort:'พอร์ต',eNoBytes:'ไม่ได้รับข้อมูลอะไรเลยจากพอร์ตนี้ ตรวจว่าเป็นพอร์ตของ STM32 (ไม่ใช่ COM อื่น) baud เป็น 230400 และเฟิร์มแวร์กำลังส่งข้อมูลอยู่',eBadLines:'ได้รับบรรทัดแล้วแต่อ่านไม่ออก (ต้องเป็น timestamp;enc1;enc2;enc3) บรรทัดล่าสุด:',eLost:'ข้อมูลหยุดมา ตรวจสายและบอร์ด',ePortPick:'เลือกพอร์ต',eNoPort:'ไม่พบพอร์ต Serial',ePortRefresh:'รีเฟรชรายชื่อพอร์ต',ePortNone:'เลือกพอร์ตก่อน',eConnect:'เชื่อมต่อ',eDisc:'ตัดการเชื่อมต่อ',eConnecting:'กำลังเชื่อมต่อ…',eOn:'เชื่อมต่อแล้ว',eStale:'เชื่อมต่อแล้ว แต่ยังไม่มีข้อมูล',eOff:'ยังไม่ได้เชื่อมต่อ',eApiErr:'เชื่อมต่อ backend ไม่ได้ (เปิด main.py ที่พอร์ต 8000 แล้วหรือยัง?)',eJoint:'ข้อต่อ',eEnc:'เอนโค้ดเดอร์',eAct:'การทำงาน',eLive:'ค่าสุทธิ (ดิบ)',eZero:'ตั้งศูนย์',eSave:'บันทึกค่าเอนโค้ดเดอร์',eSaved:'บันทึกค่าเอนโค้ดเดอร์แล้ว',eZeroed:'ตั้งศูนย์ที่',ePprErr:'PPR ต้องเป็นจำนวนเต็ม 1 ขึ้นไป',eYaw:'Yaw (Z)',ePitch:'Pitch (Y)',eSlider:'สไลเดอร์',eIso:'มุมเอียง',eTop:'มองจากบน (XY)',eSide:'มองจากข้าง (XZ)',simTitle:'หน้าจำลอง',simExit:'ออก',simPerf:'ผลการทำงานและคำแนะนำ',simAngle:'คะแนนมุมการแทง',simTilt:'เอียงจากแนวตั้งฉาก',simReset:'เริ่มใหม่',simIdle:'จัดเข็มให้ตั้งฉากกับผิวหนัง',simAligned:'ตั้งฉากแล้ว – เจาะได้',simIn:'กำลังเจาะ…',simOk:'สำเร็จ – เข็มเข้าช่องเยื่อหุ้มปอด',simFail:'ไม่สำเร็จ – เข็มโดนปอด',simOff:'ยังไม่มีสัญญาณเอนโค้ดเดอร์: ไปเชื่อมต่อที่ Settings',simApi:'เชื่อมต่อ backend ไม่ได้ (main.py :8000)',simSaved:'บันทึกผลลง History แล้ว',simSaveErr:'บันทึกผลไม่สำเร็จ',tbTitle:'แถบเครื่องมือ',tPointer:'ตัวชี้',tOrbit:'หมุนกล้อง',tZoom:'ซูม',tNeedle:'เข็ม',tLayers:'ชั้นกายวิภาค',tMeasure:'วัดระยะ',tZone:'ไฮไลต์',tUndo:'ย้อนกลับ',tRedo:'ทำซ้ำ',lSkin:'ผิวหนัง',lRibs:'ซี่โครง',lLungs:'ปอด',setTitle:'ตั้งค่า',sSfx:'เปิด/ปิดเสียง',sFf:'แรงสะท้อน',sDiff:'ความยาก',dEasy:'ง่าย',dMed:'ปานกลาง',dHard:'ยาก',mPleura:'ถึงเยื่อหุ้มปอด',mLung:'ถึงปอด',simNo3d:'ภาพ 3D ต้องโหลด three.js (ต้องต่ออินเทอร์เน็ตไปที่ cdnjs.cloudflare.com)',simOffSite:'เลือกจุดเจาะได้เฉพาะช่องซี่โครงที่ 4–6 ด้านหน้าเส้น mid-axillary line (กดปุ่มไฮไลต์เพื่อดูโซน)',simWrongSite:'ไม่สำเร็จ – ตำแหน่งเจาะผิด (ต้องเป็นช่องซี่โครงที่ 4–6 ด้านหน้าเส้น mid-axillary line)',simPickHint:'ตัวชี้: คลิกตรงไหนก็ได้ที่หน้าอกเพื่อเลือกจุดเจาะ (กดปุ่มไฮไลต์เพื่อดูโซนที่ถูกต้อง จุดอื่นจะไม่สำเร็จ)',rateLbl:'อัตราความสำเร็จ',accLbl:'ความแม่นยำในรอบนี้',simHist:'ประวัติและสถิติ',spGood:'สม่ำเสมอ',spPractice:'ต้องฝึกเพิ่ม',simLungLbl:'ไม่โดนปอด',simSpeedLbl:'ความเร็วการแทงสม่ำเสมอ',simFromLast:'จากครั้งก่อน'}
 };
+Object.assign(I18N.en, {
+  emerHint: `Emergency / Trauma is available in Hard difficulty only`,
+  simTimeLbl: `Time`, simTimeEmer: `Time (Emergency)`,
+  zoneNote: `Target: stop in the pleural space, {0}–{1} mm deep`,
+  spFast: `Too fast`, spSlow: `Too slow`,
+  simShort: `Not finished – needle withdrawn before reaching the pleural space`,
+  simTiltWarn: `Needle tilted too much – straighten it`,
+  simAgain: `Try again`, fbTitle: `Feedback`, fbRetry: `Press Try again to start a new attempt.`,
+  iGood: `Well done – no mistakes found.`,
+  iSite: `Wrong puncture site. Choose the 4th–6th intercostal space, anterior to the mid-axillary line.`,
+  iAngle: `The needle was {0}° off perpendicular when it touched the skin (limit {1}°). Align it before inserting.`,
+  iTilt: `Needle tilted {0}° at {2} mm depth (limit {1}° there). Keep the needle straight once it is inserted.`,
+  iLung: `The needle went {0} mm past the pleura and hit the lung. Stop advancing as soon as you pass the pleura.`,
+  iLungNear: `The tip came within {0} mm of the lung. Stop earlier after passing the pleura.`,
+  iShort: `You withdrew at {0} mm, before the pleura ({1} mm). Advance until you reach the pleural space.`,
+  iSpeed: `Insertion speed was uneven. Advance at a smooth, steady pace.`,
+  iFast: `Average speed was {0} mm/s – too fast. Slow down, especially near the pleura.`,
+  iSlow: `Average speed was {0} mm/s – too slow. Advance more decisively at a steady pace.`,
+  iTime: `You took {0} s; the limit is {1} s.`,
+  tutReadFirst: `Read the steps, then press “I’m ready”`,
+  coachPreT: `Before the procedure – recap`,
+  coachPre: `Confirm the indication and consent; check bleeding risk (anticoagulants, low platelets) and allergies.|Position the patient and identify the site: 4th–6th intercostal space, anterior to the mid-axillary line (turn on Highlight to see it).|Wash hands, wear sterile gloves, clean the skin with antiseptic, drape, and give local anesthetic down to the pleura.|Choose the puncture point with the Pointer tool, then hold the needle perpendicular to the skin.|Insert just above the upper border of the rib, so the needle avoids the nerve and vessels that run under each rib.`,
+  coachReady: `I’m ready – start`, coachTour: `Program tour`,
+  coachDisc: `For simulation training only – always follow your institution’s protocol.`,
+  coachPostT: `After the procedure – recap`,
+  coachPost: `Withdraw the needle along the line you inserted it, press on the site and apply a sterile dressing.|Check breathing, oxygen saturation and vital signs; watch for chest pain or worsening breathlessness (possible pneumothorax).|Arrange a chest X-ray or ultrasound as indicated, and document the procedure and what you found.|Label and send any specimens, then read your feedback on the right.`,
+  coachConnect: `Connect the device in Settings to see live guidance.`,
+  coachAlign: `Tilt the needle until it is perpendicular to the skin (within {0}°).`,
+  coachInsert: `Aligned – advance the needle slowly and steadily.`,
+  coachAdvance: `Advance steadily and keep the tilt within {0}°. The limit gets tighter near the pleura.`,
+  coachNear: `Pleura in {0} mm – slow down and keep the tilt within {1}°.`,
+  coachTiltBad: `Tilt exceeds {0}° – straighten the needle.`,
+  coachInPleura: `In the pleural space – stop advancing, then withdraw the needle to finish.`,
+  coachLung: `Stop! The needle reached the lung. Withdraw now.`,
+  coachWithdraw: `Withdraw the needle to finish.`,
+  tourBtn: `Program tour`, tourNext: `Next`, tourBack: `Back`, tourSkip: `Skip`, tourDone: `Done`, tourOf: `{0} / {1}`,
+  tourWelcomeT: `Welcome!`, tourWelcome: `This quick tour shows how to use the program. You can replay it any time with the ? button at the top.`,
+  tourModT: `Choose a procedure`, tourMod: `Pick a procedure here, then press Start Modules to set up your case.`,
+  tourTabsT: `History and Settings`, tourTabs: `History & Analytics shows your past attempts. Settings is where you connect the needle device (encoders) and set PPR.`,
+  tourProfT: `Your account`, tourProf: `Your history is saved to this account. Sign out from here.`,
+  tourAgeT: `Patient age`, tourAge: `Pediatric, Adult or Geriatric changes how the skin and tissue feel.`,
+  tourDiffT: `Difficulty`, tourDiff: `Easy and Medium allow up to 10° of tilt, Hard allows 5°. Easy has no time limit, Medium has a beginner time limit and Hard a physician-level one.`,
+  tourCaseT: `Case type`, tourCase: `Emergency / Trauma uses a tighter time limit and can only be chosen in Hard.`,
+  tourModeT: `Training mode`, tourMode: `Tutorial teaches the procedure step by step. Guide gives live scores without teaching. Blind hides the scores and turns off the Highlight and Measure tools.`,
+  tourStartT: `Start`, tourStart: `Press Start to open the simulation.`,
+  tourToolsT: `Toolbar`, tourTools: `Pointer: click the chest to choose the puncture point. Camera Orbit and Zoom change the view, Needle follows the needle tip, Layers hides skin, ribs or lungs, Measure shows depth and distances, Highlight shows the correct puncture zone, and Undo/Redo step through your view changes.`,
+  tourPerfT: `Performance panel`, tourPerf: `Shows your success rate, insert angle, avoiding the lung and steady speed. Blind mode hides these while you work and shows them in the feedback afterwards.`,
+  tourSetT: `Settings`, tourSet: `Turn sound on or off, enable Force Feedback (needs the board connected in Settings) and change the difficulty.`,
+  tourStageT: `Doing an attempt`, tourStage: `Choose a puncture point, insert the needle with the device, then withdraw it. Withdrawing finishes the attempt, saves it to History and shows what to improve.`
+});
+Object.assign(I18N.th, {
+  emerHint: `เลือก Emergency / Trauma ได้เฉพาะความยาก Hard เท่านั้น`,
+  simTimeLbl: `เวลา`, simTimeEmer: `เวลา (ฉุกเฉิน)`,
+  zoneNote: `เป้าหมาย: หยุดในช่องเยื่อหุ้มปอด ลึก {0}–{1} มม.`,
+  spFast: `เร็วเกินไป`, spSlow: `ช้าเกินไป`,
+  simShort: `ยังไม่เสร็จ – ดึงเข็มออกก่อนถึงช่องเยื่อหุ้มปอด`,
+  simTiltWarn: `เข็มเอียงเกินไป – จัดให้ตรง`,
+  simAgain: `ทำอีกครั้ง`, fbTitle: `ผลตอบรับ`, fbRetry: `กด “ทำอีกครั้ง” เพื่อเริ่มรอบใหม่`,
+  iGood: `ทำได้ดีมาก ไม่พบข้อผิดพลาด`,
+  iSite: `ตำแหน่งเจาะผิด ควรเจาะช่องซี่โครงที่ 4–6 ด้านหน้าเส้น mid-axillary line`,
+  iAngle: `ตอนเข็มแตะผิวหนังเอียงจากแนวตั้งฉาก {0}° (ลิมิต {1}°) ควรจัดเข็มให้ตรงก่อนแทง`,
+  iTilt: `เข็มเอียง {0}° ที่ความลึก {2} มม. (ลิมิตตรงนั้น {1}°) เมื่อแทงเข้าไปแล้วควรถือเข็มให้ตรง`,
+  iLung: `เข็มเลยเยื่อหุ้มปอดไป {0} มม. จนโดนปอด ควรหยุดแทงทันทีเมื่อผ่านเยื่อหุ้มปอด`,
+  iLungNear: `ปลายเข็มเข้าใกล้ปอดเหลือ {0} มม. ควรหยุดเร็วกว่านี้หลังผ่านเยื่อหุ้มปอด`,
+  iShort: `ดึงเข็มออกที่ความลึก {0} มม. ก่อนถึงเยื่อหุ้มปอด ({1} มม.) ควรแทงต่อจนถึงช่องเยื่อหุ้มปอด`,
+  iSpeed: `ความเร็วในการแทงไม่สม่ำเสมอ ควรแทงด้วยจังหวะนิ่งและสม่ำเสมอ`,
+  iFast: `ความเร็วเฉลี่ย {0} มม./วินาที เร็วเกินไป ควรชะลอ โดยเฉพาะใกล้เยื่อหุ้มปอด`,
+  iSlow: `ความเร็วเฉลี่ย {0} มม./วินาที ช้าเกินไป ควรแทงให้มั่นใจขึ้นด้วยความเร็วที่สม่ำเสมอ`,
+  iTime: `ใช้เวลา {0} วินาที เกินเวลาที่กำหนด {1} วินาที`,
+  tutReadFirst: `อ่านขั้นตอนแล้วกด “พร้อมแล้ว”`,
+  coachPreT: `ทบทวนขั้นตอนก่อนทำหัตถการ`,
+  coachPre: `ยืนยันข้อบ่งชี้และความยินยอม ตรวจความเสี่ยงเลือดออก (ยาต้านการแข็งตัวของเลือด เกล็ดเลือดต่ำ) และประวัติแพ้ยา|จัดท่าผู้ป่วยและหาตำแหน่งเจาะ: ช่องซี่โครงที่ 4–6 ด้านหน้าเส้น mid-axillary line (กดปุ่มไฮไลต์เพื่อดูโซน)|ล้างมือ สวมถุงมือปราศจากเชื้อ ทำความสะอาดผิวด้วยน้ำยาฆ่าเชื้อ คลุมผ้าปราศจากเชื้อ และฉีดยาชาเฉพาะที่ลงไปถึงเยื่อหุ้มปอด|เลือกจุดเจาะด้วยเครื่องมือตัวชี้ แล้วจัดเข็มให้ตั้งฉากกับผิวหนัง|แทงเข็มเหนือขอบบนของซี่โครง เพื่อเลี่ยงเส้นประสาทและหลอดเลือดที่วิ่งใต้ซี่โครง`,
+  coachReady: `พร้อมแล้ว – เริ่มเลย`, coachTour: `ทัวร์การใช้โปรแกรม`,
+  coachDisc: `ใช้เพื่อการฝึกจำลองเท่านั้น ให้ทำตามแนวปฏิบัติของสถาบันเสมอ`,
+  coachPostT: `ทบทวนขั้นตอนหลังทำหัตถการ`,
+  coachPost: `ดึงเข็มออกตามแนวเดิมที่แทงเข้าไป กดห้ามเลือดที่ตำแหน่งเจาะ แล้วปิดแผลด้วยผ้าปราศจากเชื้อ|ตรวจการหายใจ ค่าออกซิเจนในเลือดและสัญญาณชีพ เฝ้าระวังอาการเจ็บหน้าอกหรือหายใจเหนื่อยมากขึ้น (อาจเกิดปอดรั่ว)|ส่งตรวจเอกซเรย์ทรวงอกหรืออัลตราซาวด์ตามข้อบ่งชี้ และบันทึกหัตถการกับสิ่งที่พบ|ติดป้ายและส่งสิ่งส่งตรวจ (ถ้ามี) แล้วอ่านผลตอบรับทางขวามือ`,
+  coachConnect: `เชื่อมต่ออุปกรณ์ที่ Settings เพื่อดูคำแนะนำแบบเรียลไทม์`,
+  coachAlign: `เอียงเข็มให้ตั้งฉากกับผิวหนัง (ไม่เกิน {0}°)`,
+  coachInsert: `ตั้งฉากแล้ว – แทงเข็มช้าๆ ให้สม่ำเสมอ`,
+  coachAdvance: `แทงเข็มสม่ำเสมอและไม่ให้เอียงเกิน {0}° ลิมิตจะแคบลงเมื่อใกล้เยื่อหุ้มปอด`,
+  coachNear: `อีก {0} มม. จะถึงเยื่อหุ้มปอด – ชะลอและไม่ให้เอียงเกิน {1}°`,
+  coachTiltBad: `เอียงเกิน {0}° – จัดเข็มให้ตรง`,
+  coachInPleura: `ถึงช่องเยื่อหุ้มปอดแล้ว – หยุดแทง แล้วดึงเข็มออกเพื่อจบรอบ`,
+  coachLung: `หยุด! เข็มถึงปอดแล้ว ดึงเข็มออกทันที`,
+  coachWithdraw: `ดึงเข็มออกเพื่อจบรอบ`,
+  tourBtn: `ทัวร์การใช้โปรแกรม`, tourNext: `ถัดไป`, tourBack: `ย้อนกลับ`, tourSkip: `ข้าม`, tourDone: `เสร็จสิ้น`, tourOf: `{0} / {1}`,
+  tourWelcomeT: `ยินดีต้อนรับ!`, tourWelcome: `ทัวร์สั้นๆ นี้จะพาดูวิธีใช้โปรแกรม กดปุ่ม ? ด้านบนเพื่อเปิดดูซ้ำได้ทุกเมื่อ`,
+  tourModT: `เลือกหัตถการ`, tourMod: `เลือกหัตถการที่นี่ แล้วกด Start Modules เพื่อตั้งค่าเคส`,
+  tourTabsT: `History และ Settings`, tourTabs: `History & Analytics แสดงผลการฝึกย้อนหลัง ส่วน Settings ใช้เชื่อมต่ออุปกรณ์เข็ม (เอนโค้ดเดอร์) และตั้งค่า PPR`,
+  tourProfT: `บัญชีของคุณ`, tourProf: `ประวัติของคุณบันทึกไว้กับบัญชีนี้ ออกจากระบบได้ที่นี่`,
+  tourAgeT: `อายุผู้ป่วย`, tourAge: `เด็ก ผู้ใหญ่ หรือผู้สูงอายุ จะทำให้ความรู้สึกของผิวหนังและเนื้อเยื่อต่างกัน`,
+  tourDiffT: `ความยาก`, tourDiff: `Easy และ Medium เอียงได้ไม่เกิน 10° ส่วน Hard ไม่เกิน 5° Easy ไม่จับเวลา Medium จับเวลาตามที่มือใหม่ควรทำได้ และ Hard จับเวลาตามที่แพทย์ควรทำได้`,
+  tourCaseT: `ประเภทเคส`, tourCase: `Emergency / Trauma จับเวลาเข้มกว่า และเลือกได้เฉพาะเมื่อเลือกความยาก Hard`,
+  tourModeT: `โหมดการฝึก`, tourMode: `Tutorial สอนหัตถการทีละขั้นตอน Guide แสดงคะแนนแบบเรียลไทม์โดยไม่สอน Blind ซ่อนคะแนนและปิดเครื่องมือ Highlight กับ Measure`,
+  tourStartT: `เริ่ม`, tourStart: `กด Start เพื่อเข้าสู่หน้าจำลอง`,
+  tourToolsT: `แถบเครื่องมือ`, tourTools: `Pointer คลิกที่หน้าอกเพื่อเลือกจุดเจาะ Camera Orbit และ Zoom ปรับมุมมอง Needle ให้กล้องตามปลายเข็ม Layers ซ่อนผิวหนัง ซี่โครง หรือปอด Measure แสดงความลึกและระยะต่างๆ Highlight แสดงโซนเจาะที่ถูกต้อง และ Undo/Redo ย้อนหรือทำซ้ำการเปลี่ยนมุมมอง`,
+  tourPerfT: `แผงผลการฝึก`, tourPerf: `แสดงอัตราสำเร็จ มุมแทง การเลี่ยงปอด และความสม่ำเสมอของการแทง โหมด Blind จะซ่อนส่วนนี้ระหว่างทำ แล้วแสดงในผลตอบรับหลังจบรอบ`,
+  tourSetT: `การตั้งค่า`, tourSet: `เปิด/ปิดเสียง เปิดแรงสะท้อนกลับ (ต้องเชื่อมต่อบอร์ดที่ Settings ก่อน) และเปลี่ยนความยาก`,
+  tourStageT: `การทำหนึ่งรอบ`, tourStage: `เลือกจุดเจาะ แทงเข็มด้วยอุปกรณ์ แล้วดึงเข็มออก การดึงเข็มออกคือจบรอบ ระบบจะบันทึกลง History และบอกว่าควรแก้ตรงไหน`
+});
 const VAL = {Pediatric:'ped',Adult:'adu',Geriatric:'ger',Easy:'easy',Medium:'med',Hard:'hard',Basic:'basic','Emergency / Trauma':'emer',Tutorial:'tut',Guide:'gui',Blind:'bli'};
 const prefs = {theme:'system', lang:(navigator.language || 'en').toLowerCase().startsWith('th') ? 'th' : 'en'};
 const t = k => (I18N[prefs.lang] && I18N[prefs.lang][k]) || I18N.en[k] || k;
@@ -994,8 +1125,26 @@ function drawView(v, m){
 // พิกัด Z ขึ้น | ผู้ป่วยนอนหงาย: ศีรษะอยู่ทาง -X เท้า +X หน้าอกหันขึ้น (+Z) ขวาของผู้ป่วยอยู่ทาง -Y | ศูนย์ของเอนโค้ดเดอร์ = แกนเข็มขนานพื้น ชี้ +X
 // (เข็มตั้งฉากหน้าอกจึงอยู่ที่ pitch ≈ -90° = ชี้ลง) | รูปร่างลำตัวด้านล่างนิยามในพิกัดของตัวผู้ป่วยแล้วหมุนเข้ากลุ่ม patient
 // pitch = เงย(+)/ก้ม(-) จากแนวระดับ, yaw = หมุนรอบแนวดิ่ง | เข็มผ่านจุดเจาะ S เสมอ ปลายเข็มอยู่ลึก depth ตามแกนเข็ม
-const SIM_DIFF = [{zeroAt: 60, tol: 10}, {zeroAt: 45, tol: 5}, {zeroAt: 30, tol: 3}];   // ง่าย / ปานกลาง / ยาก
+const SIM_DIFF = [{zeroAt: 60, tol: 10}, {zeroAt: 45, tol: 10}, {zeroAt: 30, tol: 5}];   // tol = เอียงจากแนวตั้งฉากได้สูงสุด (°): Easy/Medium 10, Hard 5   // ง่าย / ปานกลาง / ยาก
 const SIM = {...SIM_DIFF[1]};
+// ---- กติกาของแต่ละความยาก/โหมด ----
+// tilt = เอียงได้สูงสุด (°) หลังเข็มเข้าตัว, tiltNear = เอียงได้สูงสุดเมื่อเข็มใกล้ถึงเยื่อหุ้มปอด, time = เวลาที่กำหนด (วินาที, null = ไม่จับเวลา)
+// ค่าเวลา/ความเร็วเป็นค่าตั้งต้นสำหรับทดลอง: ปรับได้ที่นี่ (Medium = เวลาที่มือใหม่ควรทำได้, Hard = เวลาที่แพทย์ควรทำได้, Emergency = เฉพาะ Hard)
+const SIM_RULES = [{tilt: 10, tiltNear: 5, time: null}, {tilt: 10, tiltNear: 5, time: 60}, {tilt: 5, tiltNear: 2, time: 30}];
+const SIM_EMER_TIME = 20;     // Hard + Emergency / Trauma (วินาที)
+const TILT_TAPER_MM = 10;     // ช่วงก่อนถึงเยื่อหุ้มปอด (mm) ที่ลิมิตการเอียงค่อยๆ แคบลงจาก tilt เป็น tiltNear
+const SPEED_RANGE = [4, 20];  // ความเร็วเฉลี่ยของการแทง (mm/s) ที่ถือว่าไม่ช้า/ไม่เร็วเกินไป
+const tfmt = (k, ...a) => t(k).replace(/\{(\d)\}/g, (m, i) => a[i] !== undefined ? a[i] : m);   // ข้อความแปลที่มี {0} {1}
+const simBlind = () => state.mode === 2, simTut = () => state.mode === 0;
+const simTimeLimit = () => state.kase && simDiff === 2 ? SIM_EMER_TIME : SIM_RULES[simDiff].time;
+function simTiltLimit(x, pleura){
+  const R = SIM_RULES[simDiff], k = Math.max(0, Math.min(1, (x - (pleura - TILT_TAPER_MM)) / TILT_TAPER_MM));
+  return R.tilt + (R.tiltNear - R.tilt) * k;
+}
+function simSpeedInfo(v){   // ความสม่ำเสมอของความเร็ว (%) จากสัมประสิทธิ์การแปรผัน + ความเร็วเฉลี่ย
+  const mean = v.n ? v.s / v.n : 0, cv = v.n >= 5 && mean ? Math.sqrt(Math.max(0, v.q / v.n - mean * mean)) / mean : null;
+  return {mean, pct: cv === null ? null : Math.round(100 * Math.max(0, Math.min(1, 1 - cv / 2)))};
+}
 // ท่าเริ่มต้นของเข็มในฉาก 3D (encoder yaw = 0, pitch = 0): เข็มนอนระดับพื้นตามแกน Y ปลายเข็มชี้เข้าหาผู้ป่วย ตูดเข็มหันออกนอกตัว
 // ค่านี้บวกเข้ากับ yaw ของเอนโค้ดเดอร์เฉพาะในฉาก 3D (หน้า Settings ไม่เกี่ยว) | +90 = ชี้ +Y (ตูดเข็มออกทางขวาของผู้ป่วย), -90 = กลับด้าน, 0 = แนวเดิม (ชี้ +X)
 const SIM_YAW_OFFSET_DEG = 90;
@@ -1003,7 +1152,8 @@ let simDiff = 1, simTool = 'orbit', simMeasure = false, simZone = false, simAudi
 const simLayers = {skin: true, ribs: true, lungs: true};
 try { simSfxOn = localStorage.getItem('simSfx') !== '0'; simFF = localStorage.getItem('simFf') === '1'; } catch (e) {}
 $('simSfx').checked = simSfxOn; $('simFf').checked = simFF;
-const simNew = () => ({phase: 'idle', score: null, maxX: 0, saved: false, t0: performance.now(), v: {n: 0, s: 0, q: 0, px: null, pt: null}});
+const simNew = () => ({phase: 'idle', score: null, maxX: 0, saved: false, done: false, armed: !simTut(), t0: null, tEnd: null, tilt0: null, tiltBad: null, minGap: null, why: null, fb: null,
+  v: {n: 0, s: 0, q: 0, px: null, pt: null}});   // done = ดึงเข็มออกแล้ว | armed = Tutorial ทวนขั้นตอนก่อนทำแล้ว | t0 = เวลาที่เข็มแตะผิว
 const simCv = $('simCv'), simStage = $('simStage');
 let simTimer = null, simBusy = false, simPose = null, simCam = {az: -60, el: 30, zoom: 1, follow: false}, simDrag = null, simDown = null;
 let simRun = simNew(), simSession = [], simTarget = null, simGL = null;
@@ -1169,12 +1319,12 @@ function simHit(){
   return true;
 }
 function simPick(cx, cy){
-  if (!simGL || simRun.phase !== 'idle' || (simPose && simPose.depth_mm > 0)) return;   // เลือกจุดใหม่ได้เฉพาะตอนเข็มยังไม่เข้าตัว
+  if (!simGL || (simRun.phase !== 'idle' && !simRun.done) || (simPose && simPose.depth_mm > 0)) return;   // เลือกจุดใหม่ได้เฉพาะตอนเข็มยังไม่เข้าตัว
   const r = simCv.getBoundingClientRect();
   simGL.ray.setFromCamera(new THREE.Vector2((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height * 2 - 1)), simGL.camera);
   const res = simHit();
   if (res === 'off') { $('simNote').textContent = t('simOffSite'); return; }
-  if (res) { simNewRound(); $('simNote').textContent = ''; simRender(); }
+  if (res) { simNewRound(true); $('simNote').textContent = ''; simRender(); }
 }
 
 function simDerive(p){
@@ -1198,15 +1348,41 @@ function simSfx(phase){
   else if (phase === 'success') { simTone(660, 130); simTone(880, 220, 'sine', 0.14); }
   else if (phase === 'failed') simTone(140, 500, 'sawtooth');
 }
+function simAssess(r){   // คะแนนรวม + รายการข้อผิดพลาด/ข้อควรปรับของรอบนี้ (ใช้ทุกโหมด)
+  const P = simPose || {pleura_mm: 26, lung_mm: 34}, ok = r.phase === 'success', I = [], lim = simTimeLimit();
+  const secs = r.t0 === null ? 0 : ((r.tEnd || performance.now()) - r.t0) / 1000, sp = simSpeedInfo(r.v);
+  const range = Math.max(0.1, P.lung_mm - P.pleura_mm);
+  const lungPct = r.why === 'lung' ? 0 : r.minGap === null ? null : Math.round(100 * Math.max(0, Math.min(1, r.minGap / range)));
+  const add = (k, s, ...a) => I.push({k, s, a});
+  if (r.why === 'site') add('iSite', 'bad');
+  if (r.tilt0 !== null && r.tilt0 > SIM.tol) add('iAngle', 'warn', r.tilt0.toFixed(1), SIM.tol);
+  if (r.tiltBad) add('iTilt', 'bad', r.tiltBad.tilt.toFixed(1), r.tiltBad.lim.toFixed(1), r.tiltBad.x.toFixed(0));
+  if (r.why === 'lung') add('iLung', 'bad', Math.max(0, r.maxX - P.pleura_mm).toFixed(1));
+  else if (ok && r.minGap !== null && r.minGap < range * 0.5) add('iLungNear', 'warn', Math.max(0, r.minGap).toFixed(1));
+  if (r.why === 'short') add('iShort', 'bad', r.maxX.toFixed(1), P.pleura_mm.toFixed(1));
+  if (sp.pct !== null && sp.pct < 60) add('iSpeed', 'warn');
+  if (sp.mean > SPEED_RANGE[1]) add('iFast', 'warn', sp.mean.toFixed(0));
+  else if (sp.mean && sp.mean < SPEED_RANGE[0]) add('iSlow', 'warn', sp.mean.toFixed(0));
+  if (lim && secs > lim) add('iTime', 'warn', secs.toFixed(0), lim);
+  if (!I.length) add('iGood', 'ok');
+  let score = 0;
+  if (ok) {   // คะแนนมุมตอนแตะผิว หักด้วยเอียงระหว่างแทง / เกินเวลา / เข้าใกล้ปอด
+    score = r.score === null ? 0 : r.score;
+    if (r.tiltBad) score -= Math.min(30, 15 + r.tiltBad.ex);
+    if (lim && secs > lim) score -= Math.min(30, 10 + 20 * Math.min(1, (secs - lim) / lim));
+    if (lungPct !== null) score -= (100 - lungPct) * 0.3;
+  }
+  return {ok, score: Math.max(0, Math.min(100, Math.round(score))), issues: I, secs, lungPct};
+}
 async function simFinish(){   // บันทึกผลลง History (หนึ่งผลต่อหนึ่งรอบการแทง)
   const r = simRun;
   if (r.saved || (r.phase !== 'success' && r.phase !== 'failed')) return;
-  r.saved = true;
-  const ok = r.phase === 'success';
+  r.saved = true; r.tEnd = r.tEnd || performance.now();
+  const A = simAssess(r); r.fb = A;
   const rec = {date: Date.now(), procedure: PROCS[simProc] || 'Thoracentesis', age: ['Pediatric', 'Adult', 'Geriatric'][state.age],
     difficulty: ['Easy', 'Medium', 'Hard'][simDiff], caseType: state.kase ? 'Emergency / Trauma' : 'Basic', mode: ['Tutorial', 'Guide', 'Blind'][state.mode],
-    score: ok ? r.score : 0, seconds: Math.round((performance.now() - r.t0) / 1000), result: ok ? 'success' : 'failed', angle: r.score,
-    depth_mm: Math.round(r.maxX * 10) / 10, force_feedback: simFF};
+    score: A.score, seconds: Math.round(A.secs), result: A.ok ? 'success' : 'failed', angle: r.score === null ? 0 : r.score,
+    depth_mm: Math.round(r.maxX * 10) / 10, force_feedback: simFF, issues: A.issues.map(i => i.k)};
   try { await encApi('/attempts', 'POST', rec); historyData.push({...rec, date: new Date(rec.date)}); simSession.push(rec.score); $('simNote').textContent = t('simSaved'); }
   catch (e) { r.saved = false; $('simNote').textContent = t('simSaveErr'); }
 }
@@ -1215,20 +1391,41 @@ async function histLoad(){
 }
 function simStep(){
   if (!simPose) return;
-  const d = simDerive(simPose), r = simRun, before = r.phase;
-  if (d.x <= 0 && r.phase !== 'idle') { simFinish(); simNewRound(); $('simNote').textContent = ''; return; }   // ถอยเข็มพ้นผิว = จบรอบ เริ่มรอบใหม่
-  if (r.phase === 'idle' && d.x > 0) { r.phase = 'inserted'; r.score = d.score; if (simTarget && !simTarget.site) { r.phase = 'failed'; r.why = 'site'; } }   // ล็อกคะแนนมุม ณ ตอนเข็มแตะผิว (เทียบกับจุดเจาะที่เลือก)
+  const d = simDerive(simPose), now = performance.now(), P = simPose;
+  let r = simRun;
+  if (r.done) {   // จบรอบแล้ว (ดึงเข็มออก): Easy/Medium แทงใหม่ = เริ่มรอบใหม่เอง | Hard และ Tutorial ต้องกดปุ่มทำอีกครั้ง
+    if (d.x > 0 && simDiff < 2 && !simTut()) { simNewRound(); r = simRun; $('simNote').textContent = ''; }
+    else return;
+  }
+  if (!r.armed) return;   // Tutorial: ต้องทวนขั้นตอนก่อนทำหัตถการแล้วกดพร้อมก่อน
+  const before = r.phase;
+  if (d.x <= 0 && r.phase !== 'idle') {   // ถอยเข็มพ้นผิว = จบรอบ บันทึกผล (ถ้ายังไม่ถึงเยื่อหุ้มปอดนับเป็นไม่สำเร็จ)
+    r.tEnd = r.tEnd || now;
+    if (r.phase === 'inserted') { r.phase = 'failed'; r.why = 'short'; simSfx('failed'); }
+    simFinish(); r.done = true; haptic.model.resetState();
+    return;
+  }
+  if (r.phase === 'idle' && d.x > 0) {   // ล็อกคะแนนมุม ณ ตอนเข็มแตะผิว (เทียบกับจุดเจาะที่เลือก) และเริ่มจับเวลา
+    r.phase = 'inserted'; r.score = d.score; r.tilt0 = d.tilt; r.t0 = now;
+    if (simTarget && !simTarget.site) { r.phase = 'failed'; r.why = 'site'; r.tEnd = now; }
+  }
   r.maxX = Math.max(r.maxX, d.x);
   if (r.phase === 'inserted' || r.phase === 'success') {
-    const v = r.v, now = performance.now();   // ความเร็วการแทงสม่ำเสมอ: วัดความแปรปรวนของความเร็วขณะเข็มอยู่ในตัว
-    if (v.pt !== null) { const dt = (now - v.pt) / 1000, sp = dt > 0 ? Math.abs(d.x - v.px) / dt : 0; if (sp > 2) { v.n++; v.s += sp; v.q += sp * sp; } }
+    const v = r.v;   // ความเร็วการแทงสม่ำเสมอ: วัดความแปรปรวนของความเร็วขณะเข็มอยู่ในตัว
+    if (v.pt !== null) { const dt = (now - v.pt) / 1000, sp = dt > 0 ? (d.x - v.px) / dt : 0; if (sp > 2) { v.n++; v.s += sp; v.q += sp * sp; } }
     v.px = d.x; v.pt = now;
-    if (d.x >= simPose.lung_mm) r.phase = 'failed';
-    else if (d.x >= simPose.pleura_mm) r.phase = 'success';
+    const lim = simTiltLimit(d.x, P.pleura_mm);   // เข็มเข้าตัวแล้วไม่ควรเอียง (ลิมิตแคบลงเมื่อใกล้เยื่อหุ้มปอด)
+    if (d.x >= 1 && d.tilt > lim) {
+      const ex = d.tilt - lim, b = r.tiltBad || (r.tiltBad = {n: 0, ex: 0, tilt: 0, lim: 0, x: 0});
+      b.n++; if (ex > b.ex) Object.assign(b, {ex, tilt: d.tilt, lim, x: d.x});
+    }
+    if (d.x >= P.pleura_mm) { const gap = P.lung_mm - d.x; r.minGap = r.minGap === null ? gap : Math.min(r.minGap, gap); }
+    if (d.x >= P.lung_mm) { r.phase = 'failed'; r.why = 'lung'; r.tEnd = now; }   // โดนปอด = จบทันที
+    else if (d.x >= P.pleura_mm) r.phase = 'success';
   }
-  if (r.phase !== before) { simSfx(r.phase); if (r.phase === 'failed') simFinish(); }   // โดนปอด = จบทันที
+  if (r.phase !== before) { simSfx(r.phase); if (r.phase === 'failed') simFinish(); }
 }
-function simNewRound(){ simRun = simNew(); haptic.model.resetState(); }   // รอบใหม่: ล้างความลึกสูงสุดของโมเดลแรง ไม่งั้นผิวหนังจะไม่ต้านรอบถัดไป
+function simNewRound(keep){ const armed = simRun && simRun.armed; simRun = simNew(); if (keep && armed) simRun.armed = true; haptic.model.resetState(); }   // รอบใหม่: ล้างความลึกสูงสุดของโมเดลแรง ไม่งั้นผิวหนังจะไม่ต้านรอบถัดไป | keep = ไม่ต้องทวนขั้นตอน Tutorial ซ้ำ
 let simTickN = 0;
 function simTick(){ if (ws.running || ++simTickN % 2 === 0) simPoll(); }   // อ่านจากบอร์ดตรงๆ ~30 ครั้ง/วินาที ไม่งั้นถามเซิร์ฟเวอร์ ~15 ครั้ง/วินาที
 async function simPoll(){
@@ -1249,7 +1446,8 @@ async function simPoll(){
 function simStart(){
   if (simTimer) return;
   simDiff = state.diff; $('simDiff').value = simDiff; Object.assign(SIM, SIM_DIFF[simDiff]);   // เริ่มจากความยากที่เลือกในหน้าตั้งค่า
-  simNewRound(); $('simNote').textContent = '';
+  if (simBlind()) { simMeasure = false; simZone = false; }   // Blind: ใช้ Highlight / Measure ไม่ได้
+  simNewRound(); $('simNote').textContent = ''; simToolUi();
   histLoad(); simPoll(); simTimer = setInterval(simTick, 33); hapticUpdate();
 }
 function simStop(){ simFinish(); clearInterval(simTimer); simTimer = null; hapticUpdate(); if (document.fullscreenElement) document.exitFullscreen(); }
@@ -1262,7 +1460,7 @@ function simCommit(){ const v = simSnap(); if (v === simHist[simHi]) return; sim
 function simGo(i){
   if (i < 0 || i >= simHist.length) return;
   simHi = i; const v = JSON.parse(simHist[i]);
-  Object.assign(simCam, {az: v.az, el: v.el, zoom: v.zoom, follow: v.follow}); simMeasure = v.measure; simZone = !!v.zone; Object.assign(simLayers, v.layers);
+  Object.assign(simCam, {az: v.az, el: v.el, zoom: v.zoom, follow: v.follow}); simMeasure = v.measure && !simBlind(); simZone = !!v.zone && !simBlind(); Object.assign(simLayers, v.layers);
   document.querySelectorAll('[data-layer]').forEach(c => { c.checked = simLayers[c.dataset.layer]; });
   simToolUi(); simRender();
 }
@@ -1272,6 +1470,7 @@ function simToolUi(){
   $('simTools').querySelector('[data-tog=measure]').classList.toggle('on', simMeasure);
   $('simTools').querySelector('[data-tog=layers]').classList.toggle('on', !$('simLayers').hidden);
   $('simTools').querySelector('[data-tog=zone]').classList.toggle('on', simZone);
+  ['measure', 'zone'].forEach(k => { $('simTools').querySelector('[data-tog=' + k + ']').disabled = simBlind(); });
   $('simUndo').disabled = simHi <= 0; $('simRedo').disabled = simHi >= simHist.length - 1;
   simCv.style.cursor = simTool === 'pointer' ? 'crosshair' : simTool === 'zoom' ? 'zoom-in' : 'grab';
   $('simHint').textContent = simTool === 'pointer' ? t('simPickHint') : '';
@@ -1279,6 +1478,7 @@ function simToolUi(){
 document.querySelectorAll('#simTools [data-tool]').forEach(b => b.addEventListener('click', () => { simTool = b.dataset.tool; simToolUi(); }));
 document.querySelectorAll('#simTools [data-tog]').forEach(b => b.addEventListener('click', () => {
   const k = b.dataset.tog;
+  if (simBlind() && (k === 'measure' || k === 'zone')) return;
   if (k === 'follow') simCam.follow = !simCam.follow; else if (k === 'measure') simMeasure = !simMeasure; else if (k === 'zone') simZone = !simZone; else $('simLayers').hidden = !$('simLayers').hidden;
   simCommit(); simToolUi(); simRender();
 }));
@@ -1287,7 +1487,11 @@ $('simUndo').addEventListener('click', () => simGo(simHi - 1));
 $('simRedo').addEventListener('click', () => simGo(simHi + 1));
 $('simSfx').addEventListener('change', e => { simSfxOn = e.target.checked; try { localStorage.setItem('simSfx', simSfxOn ? '1' : '0'); } catch (x) {} simTone(660, 90); });
 $('simFf').addEventListener('change', e => { simFF = e.target.checked; try { localStorage.setItem('simFf', simFF ? '1' : '0'); } catch (x) {} hapticUpdate(); });
-$('simDiff').addEventListener('change', e => { simDiff = +e.target.value; Object.assign(SIM, SIM_DIFF[simDiff]); simRender(); });
+$('simDiff').addEventListener('change', e => {
+  simDiff = +e.target.value; Object.assign(SIM, SIM_DIFF[simDiff]);
+  if (simDiff !== 2 && state.kase) { state.kase = 0; render(); }   // Emergency / Trauma ใช้ได้เฉพาะ Hard
+  simFinish(); simNewRound(true); $('simNote').textContent = ''; simRender();   // กติกาเปลี่ยน: เริ่มรอบใหม่
+});
 $('simFs').addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen(); else if (simStage.requestFullscreen) simStage.requestFullscreen(); });
 document.addEventListener('fullscreenchange', () => { $('simFs').innerHTML = document.fullscreenElement ? '&#10005;' : '&#9974;'; simRender(); });
 simHist = [simSnap()]; simToolUi();
@@ -1322,7 +1526,7 @@ function simSparkSvg(){
     pts.map(q => '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="2.5" fill="#3b82f6"/>').join('') + '</svg>';
 }
 function simUi(d){
-  const r = simRun, p = simPose, st = simStats(), dl = $('simDelta'), chip = $('simChip'), banner = $('simBanner');
+  const r = simRun, p = simPose, st = simStats(), dl = $('simDelta'), chip = $('simChip'), banner = $('simBanner'), blind = simBlind(), now = performance.now();
   $('simRate').textContent = st.rate === null ? '—' : st.rate.toFixed(1) + '%';
   dl.hidden = st.delta === null;
   if (st.delta !== null) { dl.textContent = (st.delta >= 0 ? '+' : '') + st.delta.toFixed(1) + '% ' + t('simFromLast'); dl.className = 'sim-chip ' + (st.delta >= 0 ? 'ok' : 'bad'); }
@@ -1330,31 +1534,84 @@ function simUi(d){
   $('simSpark').innerHTML = simSparkSvg();
   const mode = tv(['Tutorial', 'Guide', 'Blind'][state.mode]);
   document.querySelectorAll('.simMode').forEach(b => { b.textContent = mode; });
-  const v = r.v, mean = v.n ? v.s / v.n : 0, cv = v.n >= 5 && mean ? Math.sqrt(Math.max(0, v.q / v.n - mean * mean)) / mean : null;
-  $('simSpeed').textContent = cv === null ? '—' : cv < 0.8 ? t('spGood') : t('spPractice');
-  $('simLung').textContent = r.phase === 'failed' ? '0%' : r.phase === 'success' ? '100%' : '—';
+  $('simReset').textContent = r.done ? t('simAgain') : t('simReset');
+  // Blind: ซ่อนคะแนนมุม/เลี่ยงปอด/ความเร็ว และมุมเอียงระหว่างทำ (ไปแสดงในผลตอบรับหลังจบรอบแทน)
+  $('simAids').hidden = blind; $('simTiltRow').hidden = blind;
+  const sp = simSpeedInfo(r.v);
+  $('simSpeed').textContent = sp.pct === null ? '—' : sp.pct + '% · ' + (sp.mean > SPEED_RANGE[1] ? t('spFast') : sp.mean < SPEED_RANGE[0] ? t('spSlow') : sp.pct >= 60 ? t('spGood') : t('spPractice'));
+  const range = p ? Math.max(0.1, p.lung_mm - p.pleura_mm) : 8;
+  const lungPct = r.fb ? r.fb.lungPct : (r.phase === 'inserted' || r.phase === 'success') ? (r.minGap === null ? 100 : Math.round(100 * Math.max(0, Math.min(1, r.minGap / range)))) : null;
+  $('simLung').textContent = lungPct === null ? '—' : lungPct + '%';
+  const lim = simTimeLimit();   // Easy ไม่จับเวลา | Medium/Hard/Emergency นับตั้งแต่เข็มแตะผิวหนัง
+  $('simTimeRow').hidden = !lim;
+  if (lim) {
+    const el = r.t0 === null ? 0 : ((r.tEnd || now) - r.t0) / 1000;
+    $('simTimeLbl').textContent = t(state.kase ? 'simTimeEmer' : 'simTimeLbl');
+    $('simTime').textContent = Math.floor(el) + ' / ' + lim + ' s'; $('simTime').style.color = el > lim ? '#c62828' : '';
+  }
+  const fb = r.fb && (!blind || r.done) ? r.fb : null, box = $('simFb'), key = fb ? [prefs.lang, r.done, simDiff, state.mode].join() : '';
+  box.hidden = !fb;
+  if (box._fb !== fb || box._key !== key) {
+    box._fb = fb; box._key = key;
+    box.innerHTML = fb ? '<h3>' + t('fbTitle') + ' · ' + fb.score + '%</h3>' + fb.issues.map(i => '<div class="fbi ' + i.s + '">' + esc(tfmt(i.k, ...i.a)) + '</div>').join('') +
+      (r.done && (simDiff === 2 || simTut()) ? '<div class="fbn">' + t('fbRetry') + '</div>' : '') : '';
+  }
   if (!p || !d) {
-    $('simScore').textContent = '–'; $('simTilt').textContent = '–'; $('simDepth').textContent = '–'; $('simMtx').textContent = '';
-    chip.className = 'sim-chip bad'; chip.textContent = t('simApi'); banner.hidden = true; $('simConn').textContent = '';
+    $('simScore').textContent = '–'; $('simTilt').textContent = '–'; $('simMtx').textContent = ''; $('simZoneNote').textContent = '';
+    chip.className = 'sim-chip bad'; chip.textContent = t('simApi'); chip.hidden = false; banner.hidden = true; $('simConn').textContent = '';
     return;
   }
-  const aligned = d.tilt <= SIM.tol;
+  const tl = simTiltLimit(Math.max(0, d.x), p.pleura_mm), over = d.x > 0 && d.tilt > tl, aligned = d.tilt <= SIM.tol, reveal = !blind || r.done;
+  $('simZoneNote').textContent = blind ? '' : tfmt('zoneNote', p.pleura_mm.toFixed(1), p.lung_mm.toFixed(1));
   $('simScore').textContent = (r.score !== null ? r.score : d.score) + '%';
-  $('simTilt').textContent = d.tilt.toFixed(1) + '°';
-  $('simDepth').textContent = d.x.toFixed(1) + ' mm';
-  const [txt, cls] = r.phase === 'failed' ? [r.why === 'site' ? t('simWrongSite') : t('simFail'), 'bad'] : r.phase === 'success' ? [t('simOk'), 'ok']
-    : r.phase === 'inserted' ? [t('simIn'), 'warn'] : aligned ? [t('simAligned'), 'ok'] : [t('simIdle'), 'warn'];
-  chip.className = 'sim-chip ' + cls; chip.textContent = txt;
-  banner.hidden = !(r.phase === 'failed' || r.phase === 'success');
+  $('simTilt').textContent = d.tilt.toFixed(1) + '°' + (d.x > 0 ? ' / ' + tl.toFixed(1) + '°' : ''); $('simTilt').style.color = over ? '#c62828' : '';
+  let txt, cls;
+  if (!r.armed) { txt = t('tutReadFirst'); cls = 'warn'; }
+  else if (r.phase === 'failed') { txt = r.why === 'site' ? t('simWrongSite') : r.why === 'short' ? t('simShort') : t('simFail'); cls = 'bad'; }
+  else if (r.phase === 'success') { txt = t('simOk'); cls = 'ok'; }
+  else if (r.phase === 'inserted') { if (over && !blind) { txt = t('simTiltWarn'); cls = 'bad'; } else { txt = t('simIn'); cls = 'warn'; } }
+  else if (aligned) { txt = t('simAligned'); cls = 'ok'; }
+  else { txt = t('simIdle'); cls = 'warn'; }
+  chip.className = 'sim-chip ' + cls; chip.textContent = txt; chip.hidden = blind && !r.done;   // Blind: ไม่บอกผลระหว่างทำ
+  banner.hidden = !(r.phase === 'failed' || r.phase === 'success') || !reveal;
   banner.className = 'sim-banner ' + cls; banner.textContent = txt;
   const hf = haptic.active ? t('simFfOn') + ' \u00b7 ' + haptic.hz + ' Hz' : (simFF && !ws.running ? t('simFfNeed') : '');
   $('simConn').textContent = p.live ? hf : t('simOff') + (hf ? ' \u00b7 ' + hf : '');
-  $('simMtx').textContent = simMeasure ? `${d.x.toFixed(1)} mm  |  ${t('mPleura')} ${(p.pleura_mm - d.x).toFixed(1)} mm  |  ${t('mLung')} ${(p.lung_mm - d.x).toFixed(1)} mm` : '';
+  $('simMtx').textContent = simMeasure && !blind ? `${d.x.toFixed(1)} mm  |  ${t('mPleura')} ${(p.pleura_mm - d.x).toFixed(1)} mm  |  ${t('mLung')} ${(p.lung_mm - d.x).toFixed(1)} mm` : '';
 }
 
+// ---- โหมด Tutorial: ทวนขั้นตอนก่อน/ระหว่าง/หลังทำหัตถการ ----
+function simCoachHint(d){
+  const r = simRun, p = simPose;
+  if (!p || !d) return t('coachConnect');
+  if (r.phase === 'success') return t('coachInPleura');
+  if (r.phase === 'failed') return r.why === 'site' ? t('simWrongSite') : r.why === 'lung' ? t('coachLung') : t('coachWithdraw');
+  if (r.phase === 'idle') return d.tilt <= SIM.tol ? t('coachInsert') : tfmt('coachAlign', SIM.tol);
+  const lim = simTiltLimit(d.x, p.pleura_mm);
+  if (d.tilt > lim) return tfmt('coachTiltBad', lim.toFixed(0));
+  return d.x >= p.pleura_mm - TILT_TAPER_MM ? tfmt('coachNear', Math.max(0, p.pleura_mm - d.x).toFixed(0), lim.toFixed(0)) : tfmt('coachAdvance', lim.toFixed(0));
+}
+function simCoachUi(d){
+  const card = $('simCoach'), live = $('simLive'), r = simRun;
+  if (!simTut() || $('view-sim').hidden) { card.hidden = true; live.hidden = true; return; }
+  const stage = !r.armed ? 'pre' : r.done ? 'post' : 'run';
+  card.hidden = stage === 'run'; live.hidden = stage !== 'run';
+  if (stage === 'run') { live.textContent = simCoachHint(d); return; }
+  const key = stage + prefs.lang;
+  if (card.dataset.k !== key) {
+    card.dataset.k = key;
+    $('coachTitle').textContent = t(stage === 'pre' ? 'coachPreT' : 'coachPostT');
+    $('coachList').innerHTML = t(stage === 'pre' ? 'coachPre' : 'coachPost').split('|').map(s => '<li>' + esc(s) + '</li>').join('');
+    $('coachNote').textContent = t('coachDisc');
+    $('coachGo').textContent = t(stage === 'pre' ? 'coachReady' : 'simAgain');
+    $('coachTour').textContent = t('coachTour'); $('coachTour').hidden = stage !== 'pre';
+  }
+}
+$('coachGo').addEventListener('click', () => { if (!simRun.armed) simRun.armed = true; else if (simRun.done) simNewRound(true); simRender(); });
+$('coachTour').addEventListener('click', () => tourStart('sim'));
 function simRender(){
   const p = simPose, d = p ? simDerive(p) : null;
-  simUi(d);
+  simUi(d); simCoachUi(d);
   if ($('view-sim').hidden) return;
   const G = simInitGL();
   if (!G) { $('simConn').textContent = t('simNo3d'); return; }
@@ -1365,16 +1622,17 @@ function simRender(){
   G.skin.visible = G.body.visible = simLayers.skin; G.ribs.visible = simLayers.ribs; G.lungs.visible = simLayers.lungs; G.zone.visible = simZone;
   const V = a => new THREE.Vector3(a[0], a[1], a[2]), T = simTarget, aligned = d && d.tilt <= SIM.tol;
   G.target.position.copy(V(T.S)); G.target.quaternion.setFromUnitVectors(V([0, 0, 1]), V(T.N));   // วง + เส้นประแนวตั้งฉากที่จุดเจาะ
-  const col = simRun.phase === 'failed' ? 0xff5252 : aligned ? 0x34d27b : 0xf0b44c;
+  const reveal = !simBlind() || simRun.done;   // Blind: ไม่บอกผลด้วยสีระหว่างทำ
+  const col = reveal && simRun.phase === 'failed' ? 0xff5252 : aligned && !simBlind() ? 0x34d27b : 0xf0b44c;
   G.target.children[0].material.color.setHex(col);
   let tip = T.S;
   if (d) {
     tip = T.S.map((c, i) => c + d.u[i] * d.x / 1000);   // เข็มผ่านจุดเจาะ ปลายเข็มลึก x ตามแกนเข็ม
     G.needle.position.copy(V(tip)); G.needle.quaternion.setFromUnitVectors(V([0, 1, 0]), V(d.u));
-    G.nm.color.setHex(simRun.phase === 'failed' ? 0xff5252 : simRun.phase === 'success' ? 0x34d27b : 0xffffff);
+    G.nm.color.setHex(reveal && simRun.phase === 'failed' ? 0xff5252 : reveal && simRun.phase === 'success' ? 0x34d27b : 0xffffff);
   }
   G.needle.visible = !!d;
-  G.mline.visible = simMeasure && !!d;
+  G.mline.visible = simMeasure && !simBlind() && !!d;
   if (G.mline.visible) { const pos = G.mline.geometry.attributes.position; pos.setXYZ(0, ...T.S); pos.setXYZ(1, ...tip); pos.needsUpdate = true; }
   const tgt = simCam.follow && d ? tip : [-0.04, 0, 0], dist = (simCam.follow ? 0.4 : 0.85) / simCam.zoom;
   const el = simCam.el * Math.PI / 180, az = simCam.az * Math.PI / 180;
@@ -1465,6 +1723,55 @@ const PROCS = {thoracentesis:'Thoracentesis', paracentesis:'Paracentesis', peric
 const AVAILABLE = ['thoracentesis'];   // หัตถการที่เปิดใช้แล้ว (ที่เหลือเป็น Coming soon): เพิ่มชื่อที่นี่เมื่อทำเสร็จ แล้วเอา class "soon"/disabled ออกจากการ์ด
 let proc = null;
 let simProc = null;
+// ---- ทัวร์สอนใช้โปรแกรม: เปิดเองครั้งแรกของแต่ละหน้า (ต่อบัญชี) และเปิดซ้ำได้ด้วยปุ่ม ? ที่แถบบน หรือปุ่ม Program tour ในโหมด Tutorial ----
+let curView = 'dash', tourSteps = [], tourI = 0, tourKey = null;
+const TOURS = {
+  dash: [{x: 'tourWelcome'}, {s: '.mod[data-proc="thoracentesis"]', x: 'tourMod'}, {s: '#tabs', x: 'tourTabs'}, {s: '#profile', x: 'tourProf'}],
+  setup: [{s: '#setup .row > fieldset:nth-child(1)', x: 'tourAge'}, {s: '#setup .row > fieldset:nth-child(2)', x: 'tourDiff'}, {s: '#setup .row > fieldset:nth-child(3)', x: 'tourCase'},
+    {s: '#setup .modes', x: 'tourMode'}, {s: '#start', x: 'tourStart'}],
+  sim: [{s: '#simTools', x: 'tourTools'}, {s: '#simPerf', x: 'tourPerf'}, {s: '.sim-set', x: 'tourSet'}, {s: '#simStage', x: 'tourStage'}],
+};
+const tourFlag = k => 'sim.tour.' + (authUser || '') + '.' + k;
+const tourSeen = k => { try { return !!localStorage.getItem(tourFlag(k)); } catch (e) { return true; } };
+function tourShow(){
+  const st = tourSteps[tourI], el = st.s ? document.querySelector(st.s) : null, hole = $('tourHole'), card = $('tourCard'), last = tourI === tourSteps.length - 1;
+  $('tourTitle').textContent = t(st.x + 'T'); $('tourText').textContent = t(st.x); $('tourCount').textContent = tfmt('tourOf', tourI + 1, tourSteps.length);
+  $('tourBack').hidden = tourI === 0; $('tourBack').textContent = t('tourBack');
+  $('tourSkip').hidden = last; $('tourSkip').textContent = t('tourSkip'); $('tourNext').textContent = t(last ? 'tourDone' : 'tourNext');
+  if (el) el.scrollIntoView({block: 'nearest'});
+  const R = el ? el.getBoundingClientRect() : null, vw = innerWidth, vh = innerHeight, pad = 6;
+  if (R) Object.assign(hole.style, {left: R.left - pad + 'px', top: R.top - pad + 'px', width: R.width + 2 * pad + 'px', height: R.height + 2 * pad + 'px'});
+  else Object.assign(hole.style, {left: vw / 2 + 'px', top: vh / 2 + 'px', width: '0px', height: '0px'});
+  const cw = card.offsetWidth, ch = card.offsetHeight;
+  let left = (vw - cw) / 2, top = (vh - ch) / 2;
+  if (R) {
+    left = Math.min(Math.max(12, R.left + R.width / 2 - cw / 2), vw - cw - 12);
+    top = R.bottom + 16;
+    if (top + ch > vh - 12) top = R.top - ch - 16;
+    if (top < 12) top = Math.max(12, Math.min(vh - ch - 12, R.top + 16));   // เป้าหมายใหญ่ (เช่นฉาก 3D): วางการ์ดในกรอบ
+  }
+  card.style.left = left + 'px'; card.style.top = top + 'px';
+}
+function tourStart(key){
+  tourSteps = (TOURS[key] || []).filter(s => { if (!s.s) return true; const e = document.querySelector(s.s); return e && e.getClientRects().length; });
+  if (!tourSteps.length) return;
+  tourKey = key; tourI = 0; $('tour').hidden = false; tourShow();
+}
+function tourEnd(silent){
+  $('tour').hidden = true;
+  if (!silent && tourKey) { try { localStorage.setItem(tourFlag(tourKey), '1'); } catch (e) {} }
+  tourKey = null;
+}
+function tourAuto(view){
+  if (!TOURS[view] || !authToken || tourSeen(view)) return;
+  setTimeout(() => { if (curView === view && authToken && $('auth').hidden && $('tour').hidden && !tourSeen(view)) tourStart(view); }, 600);
+}
+$('tourNext').addEventListener('click', () => { if (tourI >= tourSteps.length - 1) tourEnd(); else { tourI++; tourShow(); } });
+$('tourBack').addEventListener('click', () => { if (tourI > 0) { tourI--; tourShow(); } });
+$('tourSkip').addEventListener('click', () => tourEnd());
+$('tourBtn').addEventListener('click', () => tourStart(curView));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('tour').hidden) tourEnd(); });
+window.addEventListener('resize', () => { if (!$('tour').hidden) tourShow(); });
 function route(){
   authRender();
   const key = location.hash.slice(1);
@@ -1486,6 +1793,9 @@ function route(){
   if (view === 'history') { refreshHistory(); histLoad(); }
   if (view === 'settings') encStart(); else encStop();
   if (view === 'sim') { $('simProc').textContent = PROCS[simProc] || PROCS.thoracentesis; simStart(); } else simStop();
+  curView = view; $('tourBtn').hidden = !TOURS[view];
+  if (!$('tour').hidden) { if (tourKey !== view) tourEnd(true); else tourShow(); }
+  tourAuto(view);
   document.title = view === 'sim' ? t('simTitle') : view === 'setup' ? PROCS[proc] + ' – ' + t('crumbT') : view === 'history' ? t('hTitle') : view === 'settings' ? t('sTitle') : t('dTitle');
   window.scrollTo(0, 0);
 }
@@ -1580,7 +1890,7 @@ async function authInit(){   // ตรวจ token ที่เก็บไว�
     try {
       const me = await encApi('/auth/me');
       authUser = me.username; authStore();
-      $('auth').hidden = true; authMsg(''); authRender(); histLoad(); wsResetServer();
+      $('auth').hidden = true; authMsg(''); authRender(); histLoad(); wsResetServer(); tourAuto(curView);
       return;
     } catch (e) {
       if (e.status) return;          // 401: encApi เรียก authExpired แล้ว (แสดงหน้าล็อกอิน)
