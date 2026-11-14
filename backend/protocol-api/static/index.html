@@ -219,7 +219,7 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
 .sim-hint{bottom:34px}.sim-mtx{top:56px;color:#ffd166}
 .sim-perf{position:absolute;top:12px;right:12px;width:290px;max-height:calc(100% - 24px);overflow:auto;padding:12px;border-radius:14px;background:rgba(240,247,255,.94);color:#17324a;box-shadow:0 4px 14px rgba(0,0,0,.25);font-size:.85rem}
 .sim-perf h2{margin:0 0 8px;font-size:1.05rem}
-.sim-hist{position:absolute;top:10px;right:12px;padding:3px 10px;border-radius:8px;background:#fff;border:1px solid #c5d6e8;color:#17324a;font-size:.75rem;font-weight:600;text-decoration:none}
+.sim-hist{display:block;width:max-content;margin:0 0 6px auto;padding:3px 10px;border-radius:8px;background:#fff;border:1px solid #c5d6e8;color:#17324a;font-size:.75rem;font-weight:600;text-decoration:none}
 .pbox{background:#fff;border:1px solid #d3e0ee;border-radius:10px;padding:8px 10px;margin-bottom:8px}
 .pbig{font-size:1.9rem;font-weight:800;line-height:1.1}
 .prow{display:flex;align-items:center;gap:6px;padding:3px 0}.prow span{flex:1}.prow b{font-variant-numeric:tabular-nums}
@@ -311,7 +311,7 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
 .tour-card{position:absolute;width:min(380px,calc(100vw - 24px));padding:14px 16px;border-radius:14px;background:var(--card);color:var(--text);border:1px solid var(--line);box-shadow:0 12px 36px rgba(0,0,0,.45)}
 .tour-card b{display:block;font-size:1.05rem;margin-bottom:6px}.tour-card p{margin:0 0 12px;font-size:.9rem;line-height:1.45}
 .tour-act{display:flex;align-items:center;gap:8px}.tour-act span{margin-right:auto;font-size:.8rem;color:var(--muted)}
-.tour-btn{margin-left:auto;width:36px;height:36px;border-radius:50%;border:1.5px solid var(--line);background:transparent;color:var(--accent);font-weight:800;font-size:1.05rem;cursor:pointer}
+.tour-btn{margin-left:auto;flex:0 0 auto;display:inline-grid;place-items:center;box-sizing:border-box;width:38px;height:38px;min-width:0;padding:0;border-radius:50%;border:1.5px solid var(--line);background:transparent;color:var(--accent);font-weight:800;font-size:1.1rem;line-height:1;cursor:pointer}
 .tour-btn[hidden]{display:none}.tour-btn:not([hidden]) + .profile{margin-left:0}
 </style>
 </head>
@@ -1534,7 +1534,7 @@ function simUi(d){
   $('simSpark').innerHTML = simSparkSvg();
   const mode = tv(['Tutorial', 'Guide', 'Blind'][state.mode]);
   document.querySelectorAll('.simMode').forEach(b => { b.textContent = mode; });
-  $('simReset').textContent = r.done ? t('simAgain') : t('simReset');
+  const rl = t(r.done ? 'simAgain' : 'simReset'); if ($('simReset').textContent !== rl) $('simReset').textContent = rl;
   // Blind: ซ่อนคะแนนมุม/เลี่ยงปอด/ความเร็ว และมุมเอียงระหว่างทำ (ไปแสดงในผลตอบรับหลังจบรอบแทน)
   $('simAids').hidden = blind; $('simTiltRow').hidden = blind;
   const sp = simSpeedInfo(r.v);
@@ -1733,13 +1733,14 @@ const TOURS = {
 };
 const tourFlag = k => 'sim.tour.' + (authUser || '') + '.' + k;
 const tourSeen = k => { try { return !!localStorage.getItem(tourFlag(k)); } catch (e) { return true; } };
-function tourShow(){
-  const st = tourSteps[tourI], el = st.s ? document.querySelector(st.s) : null, hole = $('tourHole'), card = $('tourCard'), last = tourI === tourSteps.length - 1;
-  $('tourTitle').textContent = t(st.x + 'T'); $('tourText').textContent = t(st.x); $('tourCount').textContent = tfmt('tourOf', tourI + 1, tourSteps.length);
-  $('tourBack').hidden = tourI === 0; $('tourBack').textContent = t('tourBack');
-  $('tourSkip').hidden = last; $('tourSkip').textContent = t('tourSkip'); $('tourNext').textContent = t(last ? 'tourDone' : 'tourNext');
-  if (el) el.scrollIntoView({block: 'nearest'});
-  const R = el ? el.getBoundingClientRect() : null, vw = innerWidth, vh = innerHeight, pad = 6;
+let tourSig = '';
+function tourPlace(){   // วางหลุมไฮไลต์/การ์ดตามตำแหน่งจริงของเป้าหมายตอนนี้ (เรียกซ้ำเมื่อเลย์เอาต์เปลี่ยน เช่น เข้า-ออกเต็มจอ)
+  if ($('tour').hidden || !tourSteps.length) return;
+  const st = tourSteps[tourI], el = st.s ? document.querySelector(st.s) : null, hole = $('tourHole'), card = $('tourCard');
+  const R = el && el.getClientRects().length ? el.getBoundingClientRect() : null, vw = innerWidth, vh = innerHeight, pad = 6;
+  const sig = (R ? [R.left, R.top, R.width, R.height] : []).concat([vw, vh, card.offsetHeight]).map(Math.round).join();
+  if (sig === tourSig) return;
+  tourSig = sig;
   if (R) Object.assign(hole.style, {left: R.left - pad + 'px', top: R.top - pad + 'px', width: R.width + 2 * pad + 'px', height: R.height + 2 * pad + 'px'});
   else Object.assign(hole.style, {left: vw / 2 + 'px', top: vh / 2 + 'px', width: '0px', height: '0px'});
   const cw = card.offsetWidth, ch = card.offsetHeight;
@@ -1752,10 +1753,28 @@ function tourShow(){
   }
   card.style.left = left + 'px'; card.style.top = top + 'px';
 }
+function tourShow(){
+  const st = tourSteps[tourI], el = st.s ? document.querySelector(st.s) : null, last = tourI === tourSteps.length - 1;
+  $('tourTitle').textContent = t(st.x + 'T'); $('tourText').textContent = t(st.x); $('tourCount').textContent = tfmt('tourOf', tourI + 1, tourSteps.length);
+  $('tourBack').hidden = tourI === 0; $('tourBack').textContent = t('tourBack');
+  $('tourSkip').hidden = last; $('tourSkip').textContent = t('tourSkip'); $('tourNext').textContent = t(last ? 'tourDone' : 'tourNext');
+  if (el) el.scrollIntoView({block: 'nearest'});
+  tourSig = ''; tourPlace();
+}
+// โหมดเต็มจอแสดงเฉพาะ element ที่ขยาย: ย้ายทัวร์เข้าไปอยู่ในนั้น (ออกจากเต็มจอแล้วย้ายกลับ) และวางตำแหน่งใหม่หลังเลย์เอาต์นิ่ง
+const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+function tourHost(){
+  const host = fsElement() || document.body, tour = $('tour');
+  if (tour.parentNode !== host) host.appendChild(tour);
+  tourSig = ''; [0, 120, 400].forEach(ms => setTimeout(tourPlace, ms));
+}
+document.addEventListener('fullscreenchange', tourHost); document.addEventListener('webkitfullscreenchange', tourHost);
+setInterval(tourPlace, 250);   // ตามเป้าหมายที่ขยับ (เลื่อนหน้า ปรับขนาด ฯลฯ)
+window.addEventListener('scroll', tourPlace, true);
 function tourStart(key){
   tourSteps = (TOURS[key] || []).filter(s => { if (!s.s) return true; const e = document.querySelector(s.s); return e && e.getClientRects().length; });
   if (!tourSteps.length) return;
-  tourKey = key; tourI = 0; $('tour').hidden = false; tourShow();
+  tourKey = key; tourI = 0; $('tour').hidden = false; tourHost(); tourShow();
 }
 function tourEnd(silent){
   $('tour').hidden = true;
@@ -1771,7 +1790,7 @@ $('tourBack').addEventListener('click', () => { if (tourI > 0) { tourI--; tourSh
 $('tourSkip').addEventListener('click', () => tourEnd());
 $('tourBtn').addEventListener('click', () => tourStart(curView));
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('tour').hidden) tourEnd(); });
-window.addEventListener('resize', () => { if (!$('tour').hidden) tourShow(); });
+window.addEventListener('resize', () => { tourSig = ''; tourPlace(); });
 function route(){
   authRender();
   const key = location.hash.slice(1);
