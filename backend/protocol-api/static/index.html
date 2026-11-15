@@ -1826,6 +1826,17 @@ function authStore(){
 }
 let authMsgK = '', authMsgRaw = '';   // เก็บเป็นคีย์ i18n เพื่อให้ข้อความเปลี่ยนภาษาตามเมื่อสลับ
 function authMsg(key, raw){ authMsgK = key || ''; authMsgRaw = raw || ''; $('aMsg').textContent = authMsgK ? t(authMsgK) : authMsgRaw; }
+let authPassMode = null;
+function authPassFields(reg){   // Chrome ตัดสินชนิดช่องรหัสผ่านตอนเห็นฟอร์มครั้งแรก แก้ autocomplete ทีหลังไม่พอ จึงสร้าง input ใหม่เมื่อสลับโหมด เพื่อให้ข้อเสนอรหัสผ่านแข็งแรงขึ้นที่ช่อง "รหัสผ่าน" (ไม่ใช่เฉพาะช่องยืนยัน)
+  const mode = reg ? 'reg' : 'login';
+  if (authPassMode === mode) return;
+  authPassMode = mode;
+  [['aPass', reg ? 'new-password' : 'current-password'], ['aPass2', 'new-password']].forEach(([id, ac]) => {
+    const old = $(id), n = old.cloneNode(false);
+    n.value = old.value; n.setAttribute('autocomplete', ac);
+    old.replaceWith(n);
+  });
+}
 function authRender(){
   const reg = authMode === 'reg';
   $('authTitle').textContent = t(reg ? 'aReg' : 'aLogin');
@@ -1834,7 +1845,7 @@ function authRender(){
   $('aPass2Row').hidden = !reg;
   $('aUserRow').hidden = !reg;
   $('aEmailLbl').textContent = t(reg ? 'aEmail' : 'aLoginId');
-  $('aPass').autocomplete = reg ? 'new-password' : 'current-password';
+  authPassFields(reg);
   $('aLang').textContent = prefs.lang === 'th' ? 'EN' : 'ไทย';
   $('profName').textContent = authToken && authUser ? authUser : t('prof');
   $('pmUser').textContent = authUser || '';
