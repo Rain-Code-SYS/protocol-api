@@ -1780,7 +1780,7 @@ function tourEnd(silent){
 }
 function tourAuto(view){
   if (!TOURS[view] || !authToken || tourSeen(view)) return;
-  setTimeout(() => { if (curView === view && authToken && $('auth').hidden && $('tour').hidden && !tourSeen(view)) tourStart(view); }, 600);
+  setTimeout(() => { if (curView === view && authToken && $('auth').hidden && $('tour').hidden && !tourSeen(view)) tourStart(view); }, 120);
 }
 $('tourNext').addEventListener('click', () => { if (tourI >= tourSteps.length - 1) tourEnd(); else { tourI++; tourShow(); } });
 $('tourBack').addEventListener('click', () => { if (tourI > 0) { tourI--; tourShow(); } });
@@ -1888,7 +1888,7 @@ $('authForm').addEventListener('submit', async e => {
     authToken = r.token; authUser = r.username; authStore();
     $('aPass').value = $('aPass2').value = $('aUser').value = $('aEmail').value = '';
     authMsg(''); $('auth').hidden = true; authMode = 'login';
-    authReset(); histLoad(); wsResetServer();
+    authReset(); histLoad(); wsResetServer(); tourAuto(curView);   // เข้าสู่ระบบ/สมัครแล้ว: เปิดทัวร์ครั้งแรกของบัญชีทันที
   } catch (err) {
     authMsg(err.status === 401 ? 'aBad' : err.code === 'email_taken' ? 'aEmailTaken' : err.status === 409 ? 'aTaken' : err.code === 'bad_email' ? 'aEmailErr' : err.status === 429 ? 'aLocked'
       : err.status ? '' : 'eApiErr', err.message);
