@@ -553,7 +553,7 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
     <div class="views">
       <div class="vw main"><canvas id="v3d0"></canvas><span class="vt" data-i18n="eIso">Isometric</span></div>
       <div class="vw"><canvas id="v3d1"></canvas><span class="vt" data-i18n="eTop">Top (XY)</span></div>
-      <div class="vw"><canvas id="v3d2"></canvas><span class="vt" data-i18n="eSide">Side (XZ)</span></div>
+      <div class="vw"><canvas id="v3d2"></canvas><span class="vt" data-i18n="eSide">Side (YZ)</span></div>
     </div>
   </section>
 </main>
@@ -636,7 +636,7 @@ const I18N = {
   kSucc:'Success rate',kTime:'Avg. session time',kAcc:'Overall accuracy',kLat:'Latest score',past:'Past training sessions',thDate:'Date',thProc:'Procedure',
   thMode:'Training mode',thScore:'Score',thAct:'Actions',demo:'Sample data, for layout preview only',pass:'Pass: score ≥',noData:'No data yet',
   emptyRows:'No training sessions yet. Completed sessions will appear here.',week:'Week',view:'View',viewT:'Session details are not built yet',mU:'m',sU:'s',
-  sTitle:'Settings',sTheme:'Appearance',thSys:'Use device setting',thLight:'Light',thDark:'Dark',thHint:'Use device setting follows your computer’s light or dark mode.',sLang:'Language',eTitle:'Encoder & mechanism monitor',eHint:'Needs the FastAPI backend (main.py). Only one program can open the serial port, so close serial_bridge or the debugger before connecting. Set Zero while the needle is parallel to the ground; it is saved immediately.',ePort:'Port',eNoBytes:'Nothing received from this port. Check that it is the STM32’s port (not another COM), the baud rate is 230400, and the firmware is sending.',eBadLines:'Receiving lines but cannot read them (expected timestamp;enc1;enc2;enc3). Last line:',eLost:'Data stopped arriving. Check the cable and the board.',ePortPick:'Select port',eNoPort:'No serial port found',ePortRefresh:'Refresh ports',ePortNone:'Select a port first',eConnect:'Connect',eDisc:'Disconnect',eConnecting:'Connecting…',eOn:'Connected',eStale:'Connected, no data yet',eOff:'Not connected',eApiErr:'Cannot reach the backend (is main.py running on :8000?)',eJoint:'Joint',eEnc:'Encoder',eAct:'Action',eLive:'Live net (raw)',eZero:'Set Zero',eSave:'Save encoder settings',eSaved:'Encoder settings saved',eZeroed:'Zeroed at',ePprErr:'PPR must be a whole number, 1 or more',eYaw:'Yaw (Z)',ePitch:'Pitch (Y)',eSlider:'Slider',eIso:'Isometric',eTop:'Top (XY)',eSide:'Side (XZ)',simTitle:'Simulation',simExit:'Exit',simPerf:'Performance & Suggestions',simAngle:'Insert angle score',simTilt:'Tilt from perpendicular',simReset:'Reset attempt',simIdle:'Hold the needle perpendicular to the skin',simAligned:'Perpendicular – ready to insert',simIn:'Inserting…',simOk:'Success – needle in the pleural space',simFail:'Failed – needle hit the lung',simOff:'Encoder not streaming: connect it in Settings',simApi:'Cannot reach the backend (main.py :8000)',simSaved:'Result saved to History',simSaveErr:'Could not save the result',tbTitle:'Toolbar',tPointer:'Pointer',tOrbit:'Camera Orbit',tZoom:'Zoom',tNeedle:'Needle',tLayers:'Layers',tMeasure:'Measure',tZone:'Highlight',tUndo:'Undo',tRedo:'Redo',lSkin:'Skin',lRibs:'Ribs',lLungs:'Lungs',setTitle:'Settings',sSfx:'SFX On/Off',sFf:'Force Feedback',sDiff:'Difficulty',dEasy:'Easy',dMed:'Medium',dHard:'Hard',mPleura:'to pleura',mLung:'to lung',simNo3d:'3D view needs three.js (internet connection to cdnjs.cloudflare.com)',simOffSite:'Choose the puncture point in the 4th–6th intercostal space, anterior to the mid-axillary line (press Highlight to see the zone)',simWrongSite:'Failed – wrong site (use the 4th–6th intercostal space, anterior to the mid-axillary line)',simPickHint:'Pointer: click anywhere on the chest to choose the puncture point (press Highlight to see the correct zone \u2013 other points will fail)',rateLbl:'Success Rate',accLbl:'Session accuracy',simHist:'History & Analytics',spGood:'Steady',spPractice:'Needs practice',simLungLbl:'Avoid lung',simSpeedLbl:'Steady insertion speed',simFromLast:'from last attempt'},
+  sTitle:'Settings',sTheme:'Appearance',thSys:'Use device setting',thLight:'Light',thDark:'Dark',thHint:'Use device setting follows your computer’s light or dark mode.',sLang:'Language',eTitle:'Encoder & mechanism monitor',eHint:'Needs the FastAPI backend (main.py). Only one program can open the serial port, so close serial_bridge or the debugger before connecting. Set Zero while the needle is parallel to the ground; it is saved immediately.',ePort:'Port',eNoBytes:'Nothing received from this port. Check that it is the STM32’s port (not another COM), the baud rate is 230400, and the firmware is sending.',eBadLines:'Receiving lines but cannot read them (expected timestamp;enc1;enc2;enc3). Last line:',eLost:'Data stopped arriving. Check the cable and the board.',ePortPick:'Select port',eNoPort:'No serial port found',ePortRefresh:'Refresh ports',ePortNone:'Select a port first',eConnect:'Connect',eDisc:'Disconnect',eConnecting:'Connecting…',eOn:'Connected',eStale:'Connected, no data yet',eOff:'Not connected',eApiErr:'Cannot reach the backend (is main.py running on :8000?)',eJoint:'Joint',eEnc:'Encoder',eAct:'Action',eLive:'Live net (raw)',eZero:'Set Zero',eSave:'Save encoder settings',eSaved:'Encoder settings saved',eZeroed:'Zeroed at',ePprErr:'PPR must be a whole number, 1 or more',eYaw:'Yaw (Z)',ePitch:'Pitch (Y)',eSlider:'Slider',eIso:'Isometric',eTop:'Top (XY)',eSide:'Side (YZ)',simTitle:'Simulation',simExit:'Exit',simPerf:'Performance & Suggestions',simAngle:'Insert angle score',simTilt:'Tilt from perpendicular',simReset:'Reset attempt',simIdle:'Hold the needle perpendicular to the skin',simAligned:'Perpendicular – ready to insert',simIn:'Inserting…',simOk:'Success – needle in the pleural space',simFail:'Failed – needle hit the lung',simOff:'Encoder not streaming: connect it in Settings',simApi:'Cannot reach the backend (main.py :8000)',simSaved:'Result saved to History',simSaveErr:'Could not save the result',tbTitle:'Toolbar',tPointer:'Pointer',tOrbit:'Camera Orbit',tZoom:'Zoom',tNeedle:'Needle',tLayers:'Layers',tMeasure:'Measure',tZone:'Highlight',tUndo:'Undo',tRedo:'Redo',lSkin:'Skin',lRibs:'Ribs',lLungs:'Lungs',setTitle:'Settings',sSfx:'SFX On/Off',sFf:'Force Feedback',sDiff:'Difficulty',dEasy:'Easy',dMed:'Medium',dHard:'Hard',mPleura:'to pleura',mLung:'to lung',simNo3d:'3D view needs three.js (internet connection to cdnjs.cloudflare.com)',simOffSite:'Choose the puncture point in the 4th–6th intercostal space, anterior to the mid-axillary line (press Highlight to see the zone)',simWrongSite:'Failed – wrong site (use the 4th–6th intercostal space, anterior to the mid-axillary line)',simPickHint:'Pointer: click anywhere on the chest to choose the puncture point (press Highlight to see the correct zone \u2013 other points will fail)',rateLbl:'Success Rate',accLbl:'Session accuracy',simHist:'History & Analytics',spGood:'Steady',spPractice:'Needs practice',simLungLbl:'Avoid lung',simSpeedLbl:'Steady insertion speed',simFromLast:'from last attempt'},
  th:{cSoon:'เร็วๆ นี้',aSub:'ประวัติและพัฒนาการของคุณจะถูกเก็บไว้ในบัญชีของคุณเอง',eNoWebSerial:'เบราว์เซอร์นี้อ่านบอร์ดผ่าน USB ไม่ได้ กรุณาใช้ Chrome หรือ Edge บนคอมพิวเตอร์ (เว็บต้องเป็น HTTPS หรือ localhost)',eWsOpenErr:'เปิดพอร์ตไม่ได้ (อาจมีโปรแกรมอื่นใช้อยู่)',eWsLost:'การเชื่อมต่อ USB หลุด',simFfOn:'แรงสะท้อนกลับทำงาน',simFfNeed:'แรงสะท้อนกลับต้องเชื่อมต่อบอร์ดที่ Settings ก่อน',aEmail:'อีเมล',aLoginId:'อีเมลหรือชื่อผู้ใช้',aEmailErr:'กรุณากรอกอีเมลให้ถูกต้อง',aEmailTaken:'อีเมลนี้สมัครไว้แล้ว กรุณาเข้าสู่ระบบแทน',aUser:'ชื่อผู้ใช้ (ชื่อที่แสดง)',aPass:'รหัสผ่าน',aPass2:'ยืนยันรหัสผ่าน',aLogin:'เข้าสู่ระบบ',aReg:'สมัครสมาชิก',aToReg:'ยังไม่มีบัญชี? สมัครสมาชิก',aToLogin:'มีบัญชีแล้ว? เข้าสู่ระบบ',aLogout:'ออกจากระบบ',aAs:'เข้าสู่ระบบเป็น',aBad:'อีเมล/ชื่อผู้ใช้ หรือรหัสผ่านไม่ถูกต้อง',aTaken:'ชื่อผู้ใช้นี้ถูกใช้แล้ว กรุณาเลือกชื่ออื่น',aLocked:'ใส่รหัสผ่านผิดหลายครั้ง รอสักครู่แล้วลองใหม่',aUserErr:'ชื่อผู้ใช้ 3–32 ตัว ใช้ได้เฉพาะ a-z 0-9 _ . -',aPassErr:'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร',aMismatch:'รหัสผ่านไม่ตรงกัน',aExpired:'หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบอีกครั้ง',aWait:'กำลังเชื่อมต่อ backend…',aBusy:'กรุณารอสักครู่…',home:'หน้าแรก',dash:'แดชบอร์ด',hist:'ประวัติ',mods:'โมดูล',sett:'การตั้งค่า',prof:'โปรไฟล์ผู้เรียน',soon:'ยังไม่เปิดให้ใช้งาน',
   dTitle:'เลือกโมดูลการฝึก',dSub:'เลือกหัตถการ แล้วกดปุ่ม “เริ่มโมดูล”',lvlMid:'ระดับกลาง',lvlAdv:'ระดับสูง',go:'เริ่มโมดูล →',
   d1a:'การระบายของเหลวในช่องเยื่อหุ้มปอด',d1b:'และการใส่ท่อระบายทรวงอก',d2a:'การเจาะดูดน้ำในช่องท้อง',d2b:'และการเตรียมผู้ป่วย',d3a:'การเจาะดูดน้ำในเยื่อหุ้มหัวใจ',d3b:'และการวางตำแหน่งเข็ม',
@@ -648,7 +648,7 @@ const I18N = {
   kSucc:'อัตราผ่านเกณฑ์',kTime:'เวลาฝึกเฉลี่ย',kAcc:'ความแม่นยำโดยรวม',kLat:'คะแนนล่าสุด',past:'ประวัติการฝึก',thDate:'วันที่',thProc:'หัตถการ',
   thMode:'โหมดการฝึก',thScore:'คะแนน',thAct:'การดำเนินการ',demo:'ข้อมูลตัวอย่างสำหรับดูหน้าตาเท่านั้น',pass:'ผ่านเมื่อคะแนน ≥',noData:'ยังไม่มีข้อมูล',
   emptyRows:'ยังไม่มีประวัติการฝึก เมื่อฝึกเสร็จแล้วรายการจะแสดงที่นี่',week:'สัปดาห์',view:'ดู',viewT:'ยังไม่มีหน้ารายละเอียดของแต่ละครั้ง',mU:' นาที',sU:' วินาที',
-  sTitle:'การตั้งค่า',sTheme:'ธีมการแสดงผล',thSys:'ตามอุปกรณ์',thLight:'สว่าง',thDark:'มืด',thHint:'“ตามอุปกรณ์” คือใช้โหมดสว่างหรือมืดตามที่ตั้งไว้ในเครื่องของคุณ',sLang:'ภาษา',eTitle:'เอนโค้ดเดอร์และภาพกลไก',eHint:'ต้องเปิด FastAPI backend (main.py) ไว้ และพอร์ต Serial เปิดได้ทีละโปรแกรม ให้ปิด serial_bridge หรือ debugger ก่อนกดเชื่อมต่อ ให้กด Set Zero ตอนแนวเข็มขนานกับพื้น ค่าจะถูกบันทึกทันที',ePort:'พอร์ต',eNoBytes:'ไม่ได้รับข้อมูลอะไรเลยจากพอร์ตนี้ ตรวจว่าเป็นพอร์ตของ STM32 (ไม่ใช่ COM อื่น) baud เป็น 230400 และเฟิร์มแวร์กำลังส่งข้อมูลอยู่',eBadLines:'ได้รับบรรทัดแล้วแต่อ่านไม่ออก (ต้องเป็น timestamp;enc1;enc2;enc3) บรรทัดล่าสุด:',eLost:'ข้อมูลหยุดมา ตรวจสายและบอร์ด',ePortPick:'เลือกพอร์ต',eNoPort:'ไม่พบพอร์ต Serial',ePortRefresh:'รีเฟรชรายชื่อพอร์ต',ePortNone:'เลือกพอร์ตก่อน',eConnect:'เชื่อมต่อ',eDisc:'ตัดการเชื่อมต่อ',eConnecting:'กำลังเชื่อมต่อ…',eOn:'เชื่อมต่อแล้ว',eStale:'เชื่อมต่อแล้ว แต่ยังไม่มีข้อมูล',eOff:'ยังไม่ได้เชื่อมต่อ',eApiErr:'เชื่อมต่อ backend ไม่ได้ (เปิด main.py ที่พอร์ต 8000 แล้วหรือยัง?)',eJoint:'ข้อต่อ',eEnc:'เอนโค้ดเดอร์',eAct:'การทำงาน',eLive:'ค่าสุทธิ (ดิบ)',eZero:'ตั้งศูนย์',eSave:'บันทึกค่าเอนโค้ดเดอร์',eSaved:'บันทึกค่าเอนโค้ดเดอร์แล้ว',eZeroed:'ตั้งศูนย์ที่',ePprErr:'PPR ต้องเป็นจำนวนเต็ม 1 ขึ้นไป',eYaw:'Yaw (Z)',ePitch:'Pitch (Y)',eSlider:'สไลเดอร์',eIso:'มุมเอียง',eTop:'มองจากบน (XY)',eSide:'มองจากข้าง (XZ)',simTitle:'หน้าจำลอง',simExit:'ออก',simPerf:'ผลการทำงานและคำแนะนำ',simAngle:'คะแนนมุมการแทง',simTilt:'เอียงจากแนวตั้งฉาก',simReset:'เริ่มใหม่',simIdle:'จัดเข็มให้ตั้งฉากกับผิวหนัง',simAligned:'ตั้งฉากแล้ว – เจาะได้',simIn:'กำลังเจาะ…',simOk:'สำเร็จ – เข็มเข้าช่องเยื่อหุ้มปอด',simFail:'ไม่สำเร็จ – เข็มโดนปอด',simOff:'ยังไม่มีสัญญาณเอนโค้ดเดอร์: ไปเชื่อมต่อที่ Settings',simApi:'เชื่อมต่อ backend ไม่ได้ (main.py :8000)',simSaved:'บันทึกผลลง History แล้ว',simSaveErr:'บันทึกผลไม่สำเร็จ',tbTitle:'แถบเครื่องมือ',tPointer:'ตัวชี้',tOrbit:'หมุนกล้อง',tZoom:'ซูม',tNeedle:'เข็ม',tLayers:'ชั้นกายวิภาค',tMeasure:'วัดระยะ',tZone:'ไฮไลต์',tUndo:'ย้อนกลับ',tRedo:'ทำซ้ำ',lSkin:'ผิวหนัง',lRibs:'ซี่โครง',lLungs:'ปอด',setTitle:'ตั้งค่า',sSfx:'เปิด/ปิดเสียง',sFf:'แรงสะท้อน',sDiff:'ความยาก',dEasy:'ง่าย',dMed:'ปานกลาง',dHard:'ยาก',mPleura:'ถึงเยื่อหุ้มปอด',mLung:'ถึงปอด',simNo3d:'ภาพ 3D ต้องโหลด three.js (ต้องต่ออินเทอร์เน็ตไปที่ cdnjs.cloudflare.com)',simOffSite:'เลือกจุดเจาะได้เฉพาะช่องซี่โครงที่ 4–6 ด้านหน้าเส้น mid-axillary line (กดปุ่มไฮไลต์เพื่อดูโซน)',simWrongSite:'ไม่สำเร็จ – ตำแหน่งเจาะผิด (ต้องเป็นช่องซี่โครงที่ 4–6 ด้านหน้าเส้น mid-axillary line)',simPickHint:'ตัวชี้: คลิกตรงไหนก็ได้ที่หน้าอกเพื่อเลือกจุดเจาะ (กดปุ่มไฮไลต์เพื่อดูโซนที่ถูกต้อง จุดอื่นจะไม่สำเร็จ)',rateLbl:'อัตราความสำเร็จ',accLbl:'ความแม่นยำในรอบนี้',simHist:'ประวัติและสถิติ',spGood:'สม่ำเสมอ',spPractice:'ต้องฝึกเพิ่ม',simLungLbl:'ไม่โดนปอด',simSpeedLbl:'ความเร็วการแทงสม่ำเสมอ',simFromLast:'จากครั้งก่อน'}
+  sTitle:'การตั้งค่า',sTheme:'ธีมการแสดงผล',thSys:'ตามอุปกรณ์',thLight:'สว่าง',thDark:'มืด',thHint:'“ตามอุปกรณ์” คือใช้โหมดสว่างหรือมืดตามที่ตั้งไว้ในเครื่องของคุณ',sLang:'ภาษา',eTitle:'เอนโค้ดเดอร์และภาพกลไก',eHint:'ต้องเปิด FastAPI backend (main.py) ไว้ และพอร์ต Serial เปิดได้ทีละโปรแกรม ให้ปิด serial_bridge หรือ debugger ก่อนกดเชื่อมต่อ ให้กด Set Zero ตอนแนวเข็มขนานกับพื้น ค่าจะถูกบันทึกทันที',ePort:'พอร์ต',eNoBytes:'ไม่ได้รับข้อมูลอะไรเลยจากพอร์ตนี้ ตรวจว่าเป็นพอร์ตของ STM32 (ไม่ใช่ COM อื่น) baud เป็น 230400 และเฟิร์มแวร์กำลังส่งข้อมูลอยู่',eBadLines:'ได้รับบรรทัดแล้วแต่อ่านไม่ออก (ต้องเป็น timestamp;enc1;enc2;enc3) บรรทัดล่าสุด:',eLost:'ข้อมูลหยุดมา ตรวจสายและบอร์ด',ePortPick:'เลือกพอร์ต',eNoPort:'ไม่พบพอร์ต Serial',ePortRefresh:'รีเฟรชรายชื่อพอร์ต',ePortNone:'เลือกพอร์ตก่อน',eConnect:'เชื่อมต่อ',eDisc:'ตัดการเชื่อมต่อ',eConnecting:'กำลังเชื่อมต่อ…',eOn:'เชื่อมต่อแล้ว',eStale:'เชื่อมต่อแล้ว แต่ยังไม่มีข้อมูล',eOff:'ยังไม่ได้เชื่อมต่อ',eApiErr:'เชื่อมต่อ backend ไม่ได้ (เปิด main.py ที่พอร์ต 8000 แล้วหรือยัง?)',eJoint:'ข้อต่อ',eEnc:'เอนโค้ดเดอร์',eAct:'การทำงาน',eLive:'ค่าสุทธิ (ดิบ)',eZero:'ตั้งศูนย์',eSave:'บันทึกค่าเอนโค้ดเดอร์',eSaved:'บันทึกค่าเอนโค้ดเดอร์แล้ว',eZeroed:'ตั้งศูนย์ที่',ePprErr:'PPR ต้องเป็นจำนวนเต็ม 1 ขึ้นไป',eYaw:'Yaw (Z)',ePitch:'Pitch (Y)',eSlider:'สไลเดอร์',eIso:'มุมเอียง',eTop:'มองจากบน (XY)',eSide:'มองจากข้าง (YZ)',simTitle:'หน้าจำลอง',simExit:'ออก',simPerf:'ผลการทำงานและคำแนะนำ',simAngle:'คะแนนมุมการแทง',simTilt:'เอียงจากแนวตั้งฉาก',simReset:'เริ่มใหม่',simIdle:'จัดเข็มให้ตั้งฉากกับผิวหนัง',simAligned:'ตั้งฉากแล้ว – เจาะได้',simIn:'กำลังเจาะ…',simOk:'สำเร็จ – เข็มเข้าช่องเยื่อหุ้มปอด',simFail:'ไม่สำเร็จ – เข็มโดนปอด',simOff:'ยังไม่มีสัญญาณเอนโค้ดเดอร์: ไปเชื่อมต่อที่ Settings',simApi:'เชื่อมต่อ backend ไม่ได้ (main.py :8000)',simSaved:'บันทึกผลลง History แล้ว',simSaveErr:'บันทึกผลไม่สำเร็จ',tbTitle:'แถบเครื่องมือ',tPointer:'ตัวชี้',tOrbit:'หมุนกล้อง',tZoom:'ซูม',tNeedle:'เข็ม',tLayers:'ชั้นกายวิภาค',tMeasure:'วัดระยะ',tZone:'ไฮไลต์',tUndo:'ย้อนกลับ',tRedo:'ทำซ้ำ',lSkin:'ผิวหนัง',lRibs:'ซี่โครง',lLungs:'ปอด',setTitle:'ตั้งค่า',sSfx:'เปิด/ปิดเสียง',sFf:'แรงสะท้อน',sDiff:'ความยาก',dEasy:'ง่าย',dMed:'ปานกลาง',dHard:'ยาก',mPleura:'ถึงเยื่อหุ้มปอด',mLung:'ถึงปอด',simNo3d:'ภาพ 3D ต้องโหลด three.js (ต้องต่ออินเทอร์เน็ตไปที่ cdnjs.cloudflare.com)',simOffSite:'เลือกจุดเจาะได้เฉพาะช่องซี่โครงที่ 4–6 ด้านหน้าเส้น mid-axillary line (กดปุ่มไฮไลต์เพื่อดูโซน)',simWrongSite:'ไม่สำเร็จ – ตำแหน่งเจาะผิด (ต้องเป็นช่องซี่โครงที่ 4–6 ด้านหน้าเส้น mid-axillary line)',simPickHint:'ตัวชี้: คลิกตรงไหนก็ได้ที่หน้าอกเพื่อเลือกจุดเจาะ (กดปุ่มไฮไลต์เพื่อดูโซนที่ถูกต้อง จุดอื่นจะไม่สำเร็จ)',rateLbl:'อัตราความสำเร็จ',accLbl:'ความแม่นยำในรอบนี้',simHist:'ประวัติและสถิติ',spGood:'สม่ำเสมอ',spPractice:'ต้องฝึกเพิ่ม',simLungLbl:'ไม่โดนปอด',simSpeedLbl:'ความเร็วการแทงสม่ำเสมอ',simFromLast:'จากครั้งก่อน'}
 };
 Object.assign(I18N.en, {
   emerHint: `Emergency / Trauma is available in Hard difficulty only`,
@@ -782,7 +782,7 @@ applyTheme(); applyLang(); syncSettings();
 // ---- Settings: encoder config + live values + 3D mechanism (needs FastAPI main.py on :8000) ----
 const ENC_IDS = ['Enc_1', 'Enc_2', 'Enc_3'];
 const ENC_JOINTS = [['Joint_YAW', 'eYaw'], ['Joint_PITCH', 'ePitch'], ['Slider_MOTOR', 'eSlider']];
-const MECH = {R1: 0.031, R2: 0.028, L: 0.015};   // เมตร (ค่าเดียวกับ encoder_debugger.py)
+const MECH = {rail: 0.06};   // เมตร: ความยาวรางที่วาด (เข็มกดได้ 50 mm + ระยะฟรีก่อนแตะผิว 10 mm) | ระยะเข็มมาจากสูตรพูลเลย์ z = 3CD/400 ใน HapticModel
 let encPorts = [], encPortSig = '', encPortsTimer = null, encPortsBusy = false;
 let encState = null, encTimer = null, encBusy = false, encFormReady = false, encMsgTimer = null;
 
@@ -1061,36 +1061,51 @@ function encRender(){
       : t('eNoBytes');
   } else diag.hidden = true;
 
-  const rad = {};
+  const rad = {}, netCounts = {};
   ENC_JOINTS.forEach(([k]) => {
     const raw = encState.raw[$('enc_' + k).value] || 0;
     const net = raw - encState.config[k].offset;
     const ppr = Number($('ppr_' + k).value) >= 1 ? Number($('ppr_' + k).value) : encState.config[k].ppr;
     rad[k] = net / ppr * 2 * Math.PI;
+    netCounts[k] = net;
     $('live_' + k).textContent = `${net} (${raw})`;
   });
   if ($('view-settings').hidden) return;
-  const m = mechPoints(rad.Joint_YAW, rad.Joint_PITCH, rad.Slider_MOTOR);
+  const m = mechPoints(rad.Joint_YAW, rad.Joint_PITCH, haptic.model.needleTravelMm(netCounts.Slider_MOTOR));   // ระยะเข็ม z (mm) = 3CD/400 เหมือนโมเดลแรง
   VIEWS.forEach(v => drawView(v, m));
 }
 
 // ---- 3D mechanism (พอร์ตจาก calculate_kinematics / get_transform ใน encoder_debugger.py) ----
-const VIEWS = [{id: 'v3d0', elev: 25, azim: 45}, {id: 'v3d1', elev: 90, azim: -90}, {id: 'v3d2', elev: 0, azim: -90}];
+// ท่าเริ่มต้นของเข็ม (encoder yaw = 0, pitch = 0): เข็มนอนระดับพื้นตามแกน Y ปลายเข็มชี้เข้าหาผู้ป่วย ตูดเข็มหันออกนอกตัว
+// ค่านี้บวกเข้ากับ yaw ของเอนโค้ดเดอร์ทั้งในฉาก 3D (หน้า Simulation) และภาพกลไกหน้า Settings เพื่อให้เข็มสองหน้านี้ชี้ทิศเดียวกัน
+// +90 = ชี้ +Y (ตูดเข็มออกทางขวาของผู้ป่วย), -90 = กลับด้าน, 0 = แนวเดิม (ชี้ +X)
+const SIM_YAW_OFFSET_DEG = 90;
+// true = ภาพกลไกหน้า Settings ตรึงจุดแตะผิว (ที่ระยะ free_before บนแกนเข็ม) ไว้กลางภาพ แล้วให้ yaw/pitch หมุนกลไกรอบจุดนั้น
+// ส่วนจุดแดง (เข็ม) เลื่อนไป-กลับตามแกนเข็มผ่านจุดนั้นตามความลึก เหมือนเข็มในซิมที่ผ่านจุดเจาะ S เสมอ
+// (pitch บวก = ปลายเข็มชี้ขึ้น ตัวเข็มด้านท้ายแกว่งลง) | false = หมุนรอบฐานแบบเดิม
+const SET_PIVOT_AT_SKIN = true;
+const VIEWS = [{id: 'v3d0', elev: 25, azim: 45}, {id: 'v3d1', elev: 90, azim: -90}, {id: 'v3d2', elev: 0, azim: 0}];
 function tf(pts, ty, tp){
   const cy = Math.cos(ty), sy = Math.sin(ty), cp = Math.cos(tp), sp = Math.sin(tp);
   return pts.map(([x, y, z]) => { const x1 = x * cp + z * sp, z1 = -x * sp + z * cp; return [x1 * cy - y * sy, x1 * sy + y * cy, z1]; });
 }
-function mechPoints(thY, thP, thM){
-  const {R1, R2, L} = MECH;
-  const sn = Math.max(-R2, Math.min(R2, R1 * Math.sin(thM)));
-  const s = R1 * Math.cos(thM) + Math.sqrt(R2 * R2 - sn * sn);
-  const arm = [];
-  for (let i = 0; i < 15; i++) { const a = -Math.PI / 2 + Math.PI * i / 14; arm.push([0.006 * Math.cos(a), 0, L / 2 + L / 2 * Math.sin(a)]); }
-  arm[0] = [0, 0, 0]; arm[14] = [0, 0, L];
-  const pin = [R1 * Math.sin(thM), 0, L + R1 * Math.cos(thM)], slider = [0, 0, L + s];
-  const T = pts => tf(pts.map(([x, y, z]) => [z, y, -x]), thY, -thP);   // ศูนย์ = แกนเข็มขนานพื้น (+X), pitch บวก = เงยขึ้น
-  return {base: [[0, 0, -0.01], [0, 0, 0]], arm: T(arm), rail: T([[0, 0, L], [0, 0, L + 0.1]]),
-          crank: T([[0, 0, L], pin]), rod: T([pin, slider]), tip: T([slider])[0]};
+function mechPoints(thY, thP, zMm){   // zMm = ระยะเข็ม z จากตำแหน่งถอยสุด (mm) = 3CD/400
+  const D = haptic.model.pulley_pd_mm / 1000, r = D / 2, zs = haptic.model.free_before;   // เมตร: เส้นผ่านศูนย์กลางพูลเลย์, รัศมี, ระยะฟรี (จุดแตะผิว)
+  const z = Math.max(0, Math.min(MECH.rail, zMm / 1000));
+  const pulley = [];   // วงกลมพูลเลย์ในระนาบ pitch สัมผัสแกนเข็มที่ z = 0
+  for (let i = 0; i <= 24; i++) { const a = 2 * Math.PI * i / 24; pulley.push([-r + r * Math.cos(a), 0, r * Math.sin(a)]); }
+  const off = SIM_YAW_OFFSET_DEG * Math.PI / 180;
+  const T = pts => tf(pts.map(([x, y, zz]) => [zz, y, -x]), thY + off, -thP);   // ศูนย์ = แกนเข็มขนานพื้น (ชี้ตาม SIM_YAW_OFFSET_DEG เหมือนซิม), pitch บวก = เงยขึ้น
+  const m = {base: [[0, 0, -0.01], [0, 0, 0]], pulley: T(pulley), rail: T([[0, 0, 0], [0, 0, MECH.rail]]),
+             belt: T([[0, 0, 0], [0, 0, z]]), skin: T([[-0.012, 0, zs], [0.012, 0, zs]]), tip: T([[0, 0, z]])[0],
+             center: [0.03 * Math.cos(off), 0.03 * Math.sin(off), 0]};
+  if (SET_PIVOT_AT_SKIN) {
+    const [sx, sy, sz] = T([[0, 0, zs]])[0], shift = pts => pts.map(([x, y, zz]) => [x - sx, y - sy, zz - sz]);
+    for (const k of ['base', 'pulley', 'rail', 'belt', 'skin']) m[k] = shift(m[k]);
+    m.tip = [m.tip[0] - sx, m.tip[1] - sy, m.tip[2] - sz];
+    m.center = [0, 0, 0];
+  }
+  return m;
 }
 function drawView(v, m){
   const cv = $(v.id), dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
@@ -1103,7 +1118,8 @@ function drawView(v, m){
   const el = v.elev * Math.PI / 180, az = v.azim * Math.PI / 180;
   const r = [-Math.sin(az), Math.cos(az), 0], u = [-Math.sin(el) * Math.cos(az), -Math.sin(el) * Math.sin(az), Math.cos(el)];
   const sc = 0.42 * Math.min(w, h) / 0.08;
-  const P = p => { const q = [p[0] - 0.045, p[1], p[2]];
+  const cen = m.center || [0.045, 0, 0];
+  const P = p => { const q = [p[0] - cen[0], p[1] - cen[1], p[2] - cen[2]];
     return [w / 2 + sc * (q[0] * r[0] + q[1] * r[1] + q[2] * r[2]), h / 2 - sc * (q[0] * u[0] + q[1] * u[1] + q[2] * u[2])]; };
   const line = (pts, color, width, dash) => {
     g.beginPath(); pts.forEach((p, i) => { const [x, y] = P(p); if (i) g.lineTo(x, y); else g.moveTo(x, y); });
@@ -1113,10 +1129,10 @@ function drawView(v, m){
   line([[0, -0.05, 0], [0, 0.05, 0]], 'rgba(26,156,75,.5)', 1, [4, 4]);
   line([[0, 0, -0.01], [0, 0, 0.09]], 'rgba(10,111,224,.5)', 1, [4, 4]);
   line(m.base, getComputedStyle(document.documentElement).getPropertyValue('--text').trim() || '#000', 4);
-  line(m.arm, '#8a8f98', 4);
+  line(m.pulley, '#8a8f98', 3);
   line(m.rail, '#16b8d4', 2, [2, 4]);
-  line(m.crank, '#1a9c4b', 4);
-  line(m.rod, '#f08c00', 3);
+  line(m.skin, '#1a9c4b', 3);
+  line(m.belt, '#f08c00', 3);
   const [tx, ty] = P(m.tip);
   g.beginPath(); g.arc(tx, ty, 5, 0, 2 * Math.PI); g.fillStyle = '#d23b3b'; g.fill();
 }
@@ -1145,9 +1161,6 @@ function simSpeedInfo(v){   // ความสม่ำเสมอของค�
   const mean = v.n ? v.s / v.n : 0, cv = v.n >= 5 && mean ? Math.sqrt(Math.max(0, v.q / v.n - mean * mean)) / mean : null;
   return {mean, pct: cv === null ? null : Math.round(100 * Math.max(0, Math.min(1, 1 - cv / 2)))};
 }
-// ท่าเริ่มต้นของเข็มในฉาก 3D (encoder yaw = 0, pitch = 0): เข็มนอนระดับพื้นตามแกน Y ปลายเข็มชี้เข้าหาผู้ป่วย ตูดเข็มหันออกนอกตัว
-// ค่านี้บวกเข้ากับ yaw ของเอนโค้ดเดอร์เฉพาะในฉาก 3D (หน้า Settings ไม่เกี่ยว) | +90 = ชี้ +Y (ตูดเข็มออกทางขวาของผู้ป่วย), -90 = กลับด้าน, 0 = แนวเดิม (ชี้ +X)
-const SIM_YAW_OFFSET_DEG = 90;
 let simDiff = 1, simTool = 'orbit', simMeasure = false, simZone = false, simAudio = null, simFF = false, simSfxOn = true;
 const simLayers = {skin: true, ribs: true, lungs: true};
 try { simSfxOn = localStorage.getItem('simSfx') !== '0'; simFF = localStorage.getItem('simFf') === '1'; } catch (e) {}
