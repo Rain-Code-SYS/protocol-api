@@ -40,10 +40,9 @@ TAU_FULL_SCALE = 1.0   # N·m ที่ทำให้ V = 3.3
 #   C = counts ของเอนโค้ดเดอร์สไลด์ (Slider_MOTOR) หลังหักศูนย์ (Set Zero) และคูณ sign  (C = 0 = เข็มถอยสุด)
 #   D = เส้นผ่านศูนย์กลางพิตช์ของพูลเลย์ (Pulley PD) หน่วย mm
 #   ความลึกจากผิว x = z/1000 - free_before (เมตร)
-#   ⚠️ PULLEY_PD_MM เป็นค่า placeholder (ยังไม่ทราบค่าจริง ของยังมาไม่ถึง) ต้องแก้เป็นค่าจริงก่อนใช้กับฮาร์ดแวร์
-#      (ต้องตรงกับ HapticModel.PULLEY_PD_MM ใน static/haptic_model.js)
+#   PULLEY_PD_MM = 19.1 mm (ค่าจริงของพูลเลย์) ต้องตรงกับ HapticModel.PULLEY_PD_MM ใน static/haptic_model.js
 # =============================================================================
-PULLEY_PD_MM = 20.0
+PULLEY_PD_MM = 19.1
 
 @dataclass
 class AxisCalibration:
@@ -108,7 +107,7 @@ class TissueResistanceModel:
         self.free_before = 0.010     # ระยะฟรีก่อนเข็มแตะผิว (10 mm) แรงต้าน = 0
         self.free_after = 0.008      # ระยะฟรีหลังทะลุเยื่อหุ้มปอด (8 mm) เกินจากนี้ = โดนปอด
         self.cavity_friction = True  # True = ในช่วงฟรีหลังทะลุยังมีแรงเสียดทานจากผนังอก (ตามโมเดลเดิม)
-        self.pulley_pd_mm = PULLEY_PD_MM   # D: Pulley PD (mm) ใช้คำนวณระยะเข็ม z = 3CD/400 (⚠️ placeholder ดู PULLEY_PD_MM)
+        self.pulley_pd_mm = PULLEY_PD_MM   # D: Pulley PD (mm) ใช้คำนวณระยะเข็ม z = 3CD/400 (ดู PULLEY_PD_MM)
 
         # --- ชั้นปอด (⚠️ ค่า placeholder ยังไม่ได้ calibrate) ---
         self.k_lung = 400.0          # ความแข็งเนื้อปอด (N/m)
