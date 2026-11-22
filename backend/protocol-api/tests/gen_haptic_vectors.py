@@ -10,7 +10,7 @@ import os
 import random
 
 from tests.helpers import offline_client
-from tissue_model import TissueResistanceModel
+from tissue_model import PULLEY_PD_MM, TissueResistanceModel
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "haptic_vectors.json")
@@ -41,9 +41,15 @@ def counts(config, joint, deg):
     return round(deg / 360.0 * c["ppr"]) + c["offset"]
 
 
-def sample_values(config, theta2_deg, yaw_deg, pitch_deg):
+def slider_raw(config, z_mm):
+    """raw count ของเอนโค้ดเดอร์สไลด์ที่ให้ระยะเข็ม z (mm) ตามสูตร z = 3CD/400 → C = 400 z / (3 D), raw = C + offset"""
+    return round(z_mm * 400.0 / (3.0 * PULLEY_PD_MM)) + config["Slider_MOTOR"]["offset"]
+
+
+def sample_values(config, z_mm, yaw_deg, pitch_deg):
     vals = {config[j]["encoder_id"]: counts(config, j, d) for j, d in
-            (("Slider_MOTOR", theta2_deg), ("Joint_YAW", yaw_deg), ("Joint_PITCH", pitch_deg))}
+            (("Joint_YAW", yaw_deg), ("Joint_PITCH", pitch_deg))}
+    vals[config["Slider_MOTOR"]["encoder_id"]] = slider_raw(config, z_mm)
     return vals["Enc_1"], vals["Enc_2"], vals["Enc_3"]
 
 
@@ -55,7 +61,7 @@ def build_case(name, config, apply_config, seed):
         model.apply_encoder_config(config)
         steps.append({"op": "config", "config": config})
     ts = 1000
-    theta = -5.0
+    z_mm = 0.0                                       # ระยะเข็มจากตำแหน่งถอยสุด (mm) กวาดไป-กลับถึงโซนปอด (44 mm)
     direction = 1
     for i in range(400):
         if i in (0, 130, 260):                      # เปลี่ยนกลุ่มอายุ + เริ่มรอบใหม่
@@ -67,17 +73,17 @@ def build_case(name, config, apply_config, seed):
         if i == 200:
             model.reset_state()
             steps.append({"op": "reset"})
-        theta += direction * rng.uniform(0.0, 3.0)
-        if theta > 85:
+        z_mm += direction * rng.uniform(0.0, 1.5)
+        if z_mm > 48:
             direction = -1
-        if theta < -12:
+        if z_mm < -2:
             direction = 1
         step_ms = rng.choice([0, 1, 1, 2, 5, 10, 10, 20])
         ts += step_ms
         if i == 330:
             ts = 20                                  # บอร์ดรีเซ็ตนาฬิกา
         yaw, pitch = rng.uniform(-200, 200), rng.uniform(-60, 60)
-        e1, e2, e3 = sample_values(config, theta, yaw, pitch)
+        e1, e2, e3 = sample_values(config, z_mm, yaw, pitch)
         touch = rng.choice([None, None, None, 1, 0])
         cmd = model.process_encoder(ts, e1, e2, e3, touch=touch)
         pose = model.pose(e1, e2, e3)

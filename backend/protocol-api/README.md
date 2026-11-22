@@ -76,22 +76,17 @@ touch = telemetry["touch"]
 # ตัวอย่างการคำนวณค่าแรงต้านและ Control Gains
 force = 15.0 * theta2 + 0.5 if touch == 1 else 0.0
 
-# 5. แปลงข้อมูลคำสั่งเป็น String (Trig Protocol 3: Ki;Kv;bp;by) เพื่อส่งกลับฮาร์ดแวร์
-command_data = {
-    "Ki": round(force * 0.1, 4),
-    "Kv": 12.0,
-    "bp": 1 if force > 10.0 else 0,
-    "by": 0
-}
+# 5. แปลงข้อมูลคำสั่งเป็น String (Trig Protocol 3: แรงดัน V ค่าเดียว 0-3.3 V) เพื่อส่งกลับฮาร์ดแวร์
+command_data = {"V": min(3.3, round(force * 0.1, 3))}
 command_string = client.build_message("trig_protocol_3", command_data)
 print("Command String:", command_string)
-# Output: "1.505;12.0;0;0"
+# Output: "1.505"
 ```
 
 📋 สรุปรายการโปรโตคอลในระบบ (Protocol Reference)
 
 Protocol ID : [trig_protocol_1,trig_protocol_2,trig_protocol_3]
-ชื่อโปรโตคอล : [Simulation Practice Settings,Haptic Device Telemetry,Haptic Control Command]
+ชื่อโปรโตคอล : [Simulation Practice Settings,Haptic Device Telemetry,Haptic Control Voltage Output]
 รูปแบบ (Format) : [JSON,Delimited,Delimited]
 Delimiter : [-,;,;]
-รายละเอียดฟิลด์ : [[age, difficulty, case_type, practice_mode],[p, y, z, zdot, touch, bp, by],[Ki, Kv, bp, by]]
+รายละเอียดฟิลด์ : [[age, difficulty, case_type, practice_mode],[p, y, z, zdot, touch, bp, by],[V]]

@@ -21,7 +21,7 @@ SERIAL_PORT = 'COM3'   # ปรับเปลี่ยนตามพอร์�
 BAUD_RATE = 230400
 API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000").rstrip("/")  # FastAPI backend (ตั้ง API_URL=https://ชื่อ.onrender.com เพื่อชี้ไปเว็บจริง)
 PRINT_EVERY = 10        # สตรีมเร็ว: แสดงผลทุกๆ N ตัวอย่าง กันหน้าจอกวาดช้าจนอ่านไม่ทัน
-SEND_COMMANDS = True    # ส่งคำสั่ง Trig Protocol 3 (Ki;Kv;bp;by + \n) กลับบอร์ดทางพอร์ตเดียวกัน ปิดได้ถ้าเฟิร์มแวร์ยังไม่รองรับ
+SEND_COMMANDS = True    # ส่งคำสั่ง Trig Protocol 3 (แรงดัน V 0-3.3 + \n) กลับบอร์ดทางพอร์ตเดียวกัน ปิดได้ถ้าเฟิร์มแวร์ยังไม่รองรับ
 SYNC_ENCODER_CONFIG = True  # ใช้ config เอนโค้ดเดอร์จากหน้า Settings (ผ่าน API) และซิงก์ต่อเนื่องระหว่างรัน
 CONFIG_SYNC_INTERVAL = 1.0  # วินาที
 LEGACY_PREFIX = "$TRIG2"  # ถ้าเฟิร์มแวร์ยังใส่คำนำหน้านี้มา จะตัดทิ้งก่อนแกะ (ไม่ใส่ก็ได้)
@@ -108,7 +108,7 @@ def run_bridge(max_samples: Optional[int] = None):
                 if model_errors <= 5 or model_errors % 100 == 0:
                     print(f"[Bridge] โมเดลประมวลผลตัวอย่างไม่ได้ (รวม {model_errors}): {e!r}")
             if command is not None and SEND_COMMANDS:
-                ser.write((command + "\n").encode("ascii"))  # Trig Protocol 3: Ki;Kv;bp;by
+                ser.write((command + "\n").encode("ascii"))  # Trig Protocol 3: V (0-3.3 V)
 
             if received % PRINT_EVERY == 1:
                 print(f"Encoder Telemetry Received: {telemetry} -> {command}")

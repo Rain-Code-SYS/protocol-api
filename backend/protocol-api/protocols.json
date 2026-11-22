@@ -80,34 +80,16 @@
   },
   "trig_protocol_3": {
     "protocol_id": "trig_protocol_3",
-    "name": "Haptic Control Command Output",
-    "version": "1.0.0",
+    "name": "Haptic Control Voltage Output",
+    "version": "2.0.0",
     "format_type": "delimited",
     "delimiter": ";",
     "fields": [
       {
-        "name": "Ki",
+        "name": "V",
         "data_type": "float",
         "byte_length": null,
-        "description": null
-      },
-      {
-        "name": "Kv",
-        "data_type": "float",
-        "byte_length": null,
-        "description": null
-      },
-      {
-        "name": "bp",
-        "data_type": "int",
-        "byte_length": null,
-        "description": null
-      },
-      {
-        "name": "by",
-        "data_type": "int",
-        "byte_length": null,
-        "description": null
+        "description": "Output voltage 0-3.3 V (0 = release)"
       }
     ]
   },

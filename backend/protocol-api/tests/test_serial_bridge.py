@@ -128,7 +128,8 @@ class RunBridgeTests(unittest.TestCase):
         self.assertEqual(len(fake.written), 2)
         for data in fake.written:
             self.assertTrue(data.endswith(b"\n"))
-            self.assertEqual(len(data.decode().strip().split(";")), 4)  # Ki;Kv;bp;by
+            self.assertEqual(len(data.decode().strip().split(";")), 1)  # V ค่าเดียว
+            self.assertTrue(0.0 <= float(data.decode()) <= 3.3)
 
     def test_send_commands_can_be_disabled(self):
         with mock.patch.object(serial_bridge, "SEND_COMMANDS", False):
@@ -137,9 +138,9 @@ class RunBridgeTests(unittest.TestCase):
 
     def test_model_error_does_not_stop_bridge(self):
         model_cls = serial_bridge.TissueResistanceModel
-        with mock.patch.object(model_cls, "process_encoder", side_effect=[ValueError("bad"), "1;2;0;0"]):
+        with mock.patch.object(model_cls, "process_encoder", side_effect=[ValueError("bad"), "1.5"]):
             fake, out = self.run_with([b"100;0;0;0\n", b"110;0;0;0\n"], max_samples=2)
-        self.assertEqual(fake.written, [b"1;2;0;0\n"])
+        self.assertEqual(fake.written, [b"1.5\n"])
         self.assertTrue(any("โมเดลประมวลผล" in o for o in out))
 
     def test_config_sync_starts_and_stops_when_enabled(self):

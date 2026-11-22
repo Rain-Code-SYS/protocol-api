@@ -11,7 +11,7 @@ import requests
 from encoder_service import DEFAULT_CONFIG
 from encoder_reader import EncoderStreamReader
 from tests.helpers import offline_client
-from tests.telemetry_utils import high_resolution, make_line, theta_for_depth
+from tests.telemetry_utils import high_resolution, make_line, slider_counts_for_depth
 from tissue_model import TissueResistanceModel
 
 CONFIG = {
@@ -168,7 +168,7 @@ class AutoSyncTests(unittest.TestCase):
 class PoseTests(unittest.TestCase):
     def test_pose_reports_depth_angles_and_thresholds(self):
         m = high_resolution(make_model())
-        line = make_line(m, theta_for_depth(m, 0.005), 1000, yaw_deg=10, pitch_deg=-4)
+        line = make_line(m, slider_counts_for_depth(m, 0.005), 1000, yaw_deg=10, pitch_deg=-4)
         p = m.pose(*EncoderStreamReader.parse_line(line)[1:])
         self.assertAlmostEqual(p["depth_mm"], 5.0, places=2)
         self.assertAlmostEqual(p["yaw_deg"], 10.0, places=3)

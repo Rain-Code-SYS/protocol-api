@@ -1,6 +1,6 @@
 /*
  * HapticModel: พอร์ต JavaScript ของ TissueResistanceModel (tissue_model.py) สำหรับคำนวณแรงต้านเนื้อเยื่อ
- * ในเครื่องผู้ใช้ (ไม่ผ่านเซิร์ฟเวอร์) เพื่อให้ลูป "อ่านเอนโค้ดเดอร์ -> คำนวณ Ki;Kv -> เขียนกลับบอร์ด" หน่วงน้อยที่สุด
+ * ในเครื่องผู้ใช้ (ไม่ผ่านเซิร์ฟเวอร์) เพื่อให้ลูป "อ่านเอนโค้ดเดอร์ -> คำนวณแรงดัน V -> เขียนกลับบอร์ด" หน่วงน้อยที่สุด
  *
  * - ไม่แตะ DOM / เครือข่าย / Web Serial เลย: ใช้ได้ทั้งในเบราว์เซอร์ (<script>), Web Worker (importScripts), Node และแอปเดสก์ท็อป (Electron/Tauri)
  * - สูตรต้องตรงกับ tissue_model.py เสมอ: tests/haptic_vectors.json สร้างจากโค้ด Python แล้ว tests/haptic_model.test.js เทียบผล
@@ -20,6 +20,11 @@
   };
   const ENCODER_CONFIG_AXES = {Joint_YAW: 'yaw', Joint_PITCH: 'pitch', Slider_MOTOR: 'theta2'};
   const RAD = Math.PI / 180;
+  // เอาต์พุต Trig Protocol 3 = แรงดัน V ค่าเดียว 0-3.3 V: V = |tau_total| / TAU_FULL_SCALE * V_MAX (ตัดที่ V_MAX) ต้องตรงกับ tissue_model.py
+  // ระยะเข็ม z (mm) = 3·C·D / 400  (C = counts เอนโค้ดเดอร์สไลด์หลังหักศูนย์, D = Pulley PD mm) ต้องตรงกับ tissue_model.py
+  // ⚠️ PULLEY_PD_MM เป็นค่า placeholder (ยังไม่ทราบค่าจริง) ต้องแก้เป็นค่าจริงก่อนใช้กับฮาร์ดแวร์ และให้ตรงกับ PULLEY_PD_MM ใน tissue_model.py
+  const PULLEY_PD_MM = 20.0;
+  const V_MAX = 3.3, TAU_FULL_SCALE = 1.0;   // TAU_FULL_SCALE = แรงบิด (N·m) ที่ทำให้เต็มสเกล เป็นค่าตั้งต้นสำหรับทดลอง ปรับให้ตรงกับไดรเวอร์จริง
 
   /** ข้อความตัวเลขแบบเดียวกับ str(float) ของ Python ("12.0", "1e-05") เพื่อให้คำสั่งที่ส่งบอร์ดเหมือน serial_bridge.py ทุกไบต์ */
   function pyFloat(x) {
@@ -69,7 +74,7 @@
       this.free_before = 0.010;
       this.free_after = 0.008;
       this.cavity_friction = true;
-      this.theta_home_deg = 0.0;
+      this.pulley_pd_mm = PULLEY_PD_MM;   // D: Pulley PD (mm)
       this.k_lung = 400.0;
       this.gamma_lung = 0.5;
       // --- เอนโค้ดเดอร์ (ตรงกับค่าตั้งต้นหน้า Settings) ---
@@ -192,10 +197,19 @@
       return [s, j];
     }
 
-    depthFromS(s) {
-      const s_home = this.calculateKinematics(this.theta_home_deg)[0];
-      return (s_home - s) - this.free_before;
+    /** C = counts เอนโค้ดเดอร์สไลด์ (ช่องตาม axes.theta2) หลังหักศูนย์และคูณ sign */
+    sliderCounts(enc1, enc2, enc3) {
+      const counts = {enc1, enc2, enc3};
+      const ax = this.axes.theta2;
+      if (!(ax.channel in counts)) throw new Error("แกน 'theta2' ชี้ไปที่ช่อง '" + ax.channel + "' ซึ่งไม่มี");
+      return ax.sign * (counts[ax.channel] - ax.zero_counts);
     }
+
+    /** ระยะเข็มจากตำแหน่งถอยสุด z (mm) = 3·C·D / 400 */
+    needleTravelMm(c) { return 3.0 * c * this.pulley_pd_mm / 400.0; }
+
+    /** counts สไลด์ C -> ความลึก x จากผิวหนัง (เมตร) = z/1000 - free_before */
+    depthFromCounts(c) { return this.needleTravelMm(c) / 1000.0 - this.free_before; }
 
     /** counts ของ enc1..enc3 -> [pitch, yaw, theta2] (องศา) ตาม this.axes */
     encodersToAngles(enc1, enc2, enc3) {
@@ -211,9 +225,9 @@
 
     /** ท่าของเข็มจากเอนโค้ดเดอร์ (ไม่มี side effect) สำหรับวาดหน้า Simulation */
     pose(enc1, enc2, enc3) {
-      const [pitch, yaw, theta2] = this.encodersToAngles(enc1, enc2, enc3);
+      const [pitch, yaw] = this.encodersToAngles(enc1, enc2, enc3);
       const wrap = a => (((a + 180.0) % 360.0) + 360.0) % 360.0 - 180.0;
-      const x = this.depthFromS(this.calculateKinematics(theta2)[0]);
+      const x = this.depthFromCounts(this.sliderCounts(enc1, enc2, enc3));
       return {
         pitch_deg: wrap(pitch), yaw_deg: wrap(yaw), depth_mm: x * 1000.0,
         pleura_mm: (this.x_pleura + this.delta2) * 1000.0, lung_mm: this.x_lung * 1000.0,
@@ -231,33 +245,39 @@
       return v;
     }
 
-    /** ประมวลผลตัวอย่าง 1 ชุด คืนตัวเลขดิบ {ki, kv, bp, by, x, v, f_total} */
+    /** ประมวลผลตัวอย่าง 1 ชุด คืนตัวเลขดิบ {volt, x, v, f_total} */
     step(timestamp_ms, enc1, enc2, enc3, touch) {
       if (touch === undefined || touch === null) touch = this.touch;
       const [, yaw_deg, theta2_deg] = this.encodersToAngles(enc1, enc2, enc3);
-      const [s, j_theta2] = this.calculateKinematics(theta2_deg);
-      const x = this.depthFromS(s);
+      const j_theta2 = this.calculateKinematics(theta2_deg)[1];   // Jacobian ยังมาจาก slider-crank เดิม (ระยะเข็มใช้สูตรพูลเลย์)
+      const x = this.depthFromCounts(this.sliderCounts(enc1, enc2, enc3));
       const v = this._velocity(x, timestamp_ms);
       this.x_max = Math.max(this.x_max, x);
       this._setLungState(x > this.x_lung);
       const f_total = this.calculateFTotal(x, v, this.x_max);
       const tau_total = (f_total + this.M1 * this.G * Math.sin(yaw_deg * RAD)) * j_theta2;
-      const ki = Math.abs(tau_total) * 10.0;
-      const kv = Math.abs(v) * 2.5 + 0.5;
-      const released = touch === 0;
-      return {ki, kv, bp: released ? 1 : 0, by: released ? 1 : 0, x, v, f_total};
+      const volt = touch === 0 ? 0.0 : HapticModel.voltageFromTau(tau_total);   // touch = 0 (ไม่สัมผัส) = ปล่อยแรง = 0 V
+      return {volt, x, v, f_total};
     }
 
-    /** คำสั่ง Trig Protocol 3 ("Ki;Kv;bp;by") พร้อมส่งบอร์ด (ต่อท้ายด้วย \n เอง) */
+    /** แรงบิดรวม (N·m) -> แรงดัน 0-V_MAX ปัดทศนิยม 3 ตำแหน่ง (ขั้นตอนเดียวกับ voltage_from_tau ใน Python) */
+    static voltageFromTau(tau_total) {
+      const v = Math.min(V_MAX, Math.abs(tau_total) / TAU_FULL_SCALE * V_MAX);
+      return Math.floor(v * 1000.0 + 0.5) / 1000.0;
+    }
+
+    /** คำสั่ง Trig Protocol 3 ("V") พร้อมส่งบอร์ด (ต่อท้ายด้วย \n เอง) */
     processEncoder(timestamp_ms, enc1, enc2, enc3, touch) {
       const r = this.step(timestamp_ms, enc1, enc2, enc3, touch);
-      return pyFloat(r.ki) + ';' + pyFloat(r.kv) + ';' + r.bp + ';' + r.by;
+      return pyFloat(r.volt);
     }
   }
 
   HapticModel.AGE_SKIN_PROFILES = AGE_SKIN_PROFILES;
   HapticModel.pyFloat = pyFloat;
-  /** คำสั่งปล่อยแรง: Ki=0, Kv ต่ำสุด, ปลดล็อก (bp=by=1) ใช้ตอนหยุดแรงสะท้อนกลับ/ตัดการเชื่อมต่อ */
-  HapticModel.RELEASE_COMMAND = '0.0;0.5;1;1';
+  HapticModel.PULLEY_PD_MM = PULLEY_PD_MM;
+  HapticModel.V_MAX = V_MAX; HapticModel.TAU_FULL_SCALE = TAU_FULL_SCALE;
+  /** คำสั่งปล่อยแรง: V = 0 ใช้ตอนหยุดแรงสะท้อนกลับ/ตัดการเชื่อมต่อ */
+  HapticModel.RELEASE_COMMAND = '0.0';
   return HapticModel;
 });

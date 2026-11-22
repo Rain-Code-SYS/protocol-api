@@ -3,7 +3,7 @@ import unittest
 from unittest import mock
 
 from tests.helpers import offline_client
-from tissue_model import AGE_SKIN_PROFILES, TissueResistanceModel
+from tissue_model import AGE_SKIN_PROFILES, PULLEY_PD_MM, TissueResistanceModel
 
 
 def make_model():
@@ -127,12 +127,58 @@ class Protocol1LinkTests(unittest.TestCase):
             self.assertIsNone(m.apply_latest_session())
 
 
+class NeedleTravelFormulaTests(unittest.TestCase):
+    """ระยะเข็ม z = 3·C·D / 400 (mm), C = counts สไลด์หลังหักศูนย์, D = Pulley PD (mm)"""
+
+    def test_formula_values(self):
+        m = make_model()
+        m.pulley_pd_mm = 20.0
+        self.assertAlmostEqual(m.needle_travel_mm(0), 0.0)
+        self.assertAlmostEqual(m.needle_travel_mm(100), 15.0)    # 3*100*20/400
+        self.assertAlmostEqual(m.needle_travel_mm(-40), -6.0)
+        m.pulley_pd_mm = 32.0
+        self.assertAlmostEqual(m.needle_travel_mm(100), 24.0)    # 3*100*32/400
+
+    def test_default_pulley_pd_is_the_module_constant(self):
+        self.assertEqual(make_model().pulley_pd_mm, PULLEY_PD_MM)
+
+    def test_depth_is_travel_minus_free_zone(self):
+        m = make_model()
+        m.pulley_pd_mm = 20.0
+        self.assertAlmostEqual(m.depth_from_counts(0), -0.010)           # ถอยสุด = ลอยอยู่ 10 mm
+        self.assertAlmostEqual(m.depth_from_counts(200 / 3), 0.0)        # z = 10 mm = แตะผิวพอดี
+        self.assertAlmostEqual(m.depth_from_counts(200), 0.020)          # z = 30 mm → ลึก 20 mm
+
+    def test_slider_counts_apply_zero_and_sign(self):
+        m = make_model()
+        m.axes["theta2"].zero_counts = 667
+        self.assertEqual(m.slider_counts(0, 0, 667 + 50), 50)           # enc3 = ช่องสไลด์ตามค่าตั้งต้น
+        m.axes["theta2"].sign = -1
+        self.assertEqual(m.slider_counts(0, 0, 667 + 50), -50)
+        m.axes["theta2"].channel = "enc1"
+        self.assertEqual(m.slider_counts(667 + 50, 0, 0), -50)
+
+    def test_depth_comes_from_slider_channel_not_other_encoders(self):
+        m = make_model()
+        a = m.pose(0, 0, 100)["depth_mm"]
+        b = m.pose(999, -999, 100)["depth_mm"]
+        self.assertAlmostEqual(a, b)
+        self.assertAlmostEqual(a, 3 * 100 * m.pulley_pd_mm / 400.0 - 10.0)
+
+    def test_process_encoder_uses_formula_depth(self):
+        m = make_model()
+        m.pulley_pd_mm = 20.0
+        self.assertEqual(m.process_encoder(1000, 0, 0, 0), "0.0")       # ลอยอยู่ในระยะฟรี: แรง = 0
+        self.assertGreater(float(m.process_encoder(1010, 0, 0, 120)), 0.0)  # z = 18 mm → ลึก 8 mm มีแรงต้าน
+
+
 class TelemetryStillWorksTests(unittest.TestCase):
     def test_process_telemetry_returns_protocol3_message(self):
         m = make_model()
         m.apply_age(0)
         out = m.process_telemetry("1000;0;0;398")  # timestamp;enc1;enc2;enc3
-        self.assertEqual(len(out.split(";")), 4)
+        self.assertEqual(len(out.split(";")), 1)   # Trig Protocol 3 = แรงดัน V ค่าเดียว
+        self.assertTrue(0.0 <= float(out) <= 3.3)
 
 
 if __name__ == "__main__":

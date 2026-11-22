@@ -25,6 +25,26 @@ AGE_SKIN_PROFILES: Dict[int, Dict[str, Any]] = {
     2: {"label": "Geriatric", "k_skin": 1000.0, "x_p": 0.0025},
 }
 
+# =============================================================================
+# 🔌 เอาต์พุต Trig Protocol 3: ส่ง "แรงดัน V" ค่าเดียว ช่วง 0 – 3.3 V (ไม่มี Ki / Kv / bp / by แล้ว)
+#   V = |tau_total| / TAU_FULL_SCALE * V_MAX  (ตัดที่ V_MAX)   tau_total = แรงบิดรวมที่โมเดลคำนวณ (รวมแรงเสียดทานและน้ำหนักเข็มแล้ว)
+#   ปล่อยแรง (touch = 0) = 0 V | ปัดเป็นทศนิยม 3 ตำแหน่ง (1 mV) กันเลขยกกำลังแบบ 1e-05 ในข้อความที่ส่งบอร์ด
+#   ⚠️ TAU_FULL_SCALE (แรงบิดที่ทำให้เต็มสเกล 3.3 V) เป็นค่าตั้งต้นสำหรับทดลอง ต้องปรับให้ตรงกับไดรเวอร์/มอเตอร์จริง
+#      (ต้องตรงกับ HapticModel.TAU_FULL_SCALE ใน static/haptic_model.js)
+# =============================================================================
+V_MAX = 3.3
+TAU_FULL_SCALE = 1.0   # N·m ที่ทำให้ V = 3.3
+
+# =============================================================================
+# 📏 ระยะเข็ม (travel) จากเอนโค้ดเดอร์สไลด์: z = 3·C·D / 400  (หน่วย mm)
+#   C = counts ของเอนโค้ดเดอร์สไลด์ (Slider_MOTOR) หลังหักศูนย์ (Set Zero) และคูณ sign  (C = 0 = เข็มถอยสุด)
+#   D = เส้นผ่านศูนย์กลางพิตช์ของพูลเลย์ (Pulley PD) หน่วย mm
+#   ความลึกจากผิว x = z/1000 - free_before (เมตร)
+#   ⚠️ PULLEY_PD_MM เป็นค่า placeholder (ยังไม่ทราบค่าจริง ของยังมาไม่ถึง) ต้องแก้เป็นค่าจริงก่อนใช้กับฮาร์ดแวร์
+#      (ต้องตรงกับ HapticModel.PULLEY_PD_MM ใน static/haptic_model.js)
+# =============================================================================
+PULLEY_PD_MM = 20.0
+
 @dataclass
 class AxisCalibration:
     """การแปลงค่านับ (counts) ของเอนโค้ดเดอร์ 1 ช่อง → มุมของแกน (องศา)
@@ -88,7 +108,7 @@ class TissueResistanceModel:
         self.free_before = 0.010     # ระยะฟรีก่อนเข็มแตะผิว (10 mm) แรงต้าน = 0
         self.free_after = 0.008      # ระยะฟรีหลังทะลุเยื่อหุ้มปอด (8 mm) เกินจากนี้ = โดนปอด
         self.cavity_friction = True  # True = ในช่วงฟรีหลังทะลุยังมีแรงเสียดทานจากผนังอก (ตามโมเดลเดิม)
-        self.theta_home_deg = 0.0    # มุม theta2 ที่ตำแหน่งเข็มถอยสุด (travel = 0)
+        self.pulley_pd_mm = PULLEY_PD_MM   # D: Pulley PD (mm) ใช้คำนวณระยะเข็ม z = 3CD/400 (⚠️ placeholder ดู PULLEY_PD_MM)
 
         # --- ชั้นปอด (⚠️ ค่า placeholder ยังไม่ได้ calibrate) ---
         self.k_lung = 400.0          # ความแข็งเนื้อปอด (N/m)
@@ -399,9 +419,9 @@ class TissueResistanceModel:
 
         คืนมุม pitch/yaw (องศา, -180..180), ความลึก depth_mm จากผิว (ลบ = ยังไม่แตะ) และระยะที่ทะลุเยื่อหุ้มปอด/เริ่มโดนปอด (mm)
         """
-        pitch, yaw, theta2 = self.encoders_to_angles(enc1, enc2, enc3)
+        pitch, yaw, _theta2 = self.encoders_to_angles(enc1, enc2, enc3)
         wrap = lambda a: (a + 180.0) % 360.0 - 180.0
-        x = self.depth_from_s(self.calculate_kinematics(theta2)[0])
+        x = self.depth_from_counts(self.slider_counts(enc1, enc2, enc3))
         return {"pitch_deg": wrap(pitch), "yaw_deg": wrap(yaw), "depth_mm": x * 1000.0,
                 "pleura_mm": (self.x_pleura + self.delta2) * 1000.0, "lung_mm": self.x_lung * 1000.0}
 
@@ -420,15 +440,24 @@ class TissueResistanceModel:
             
         return s, j_theta2
 
-    def depth_from_s(self, s):
-        """แปลงระยะกระจัด s ของสไลด์ → ความลึก x ของเข็มวัดจากผิวหนัง
+    def slider_counts(self, enc1: int, enc2: int, enc3: int) -> float:
+        """C = counts ของเอนโค้ดเดอร์สไลด์ (ช่องตาม axes["theta2"]) หลังหักศูนย์และคูณ sign: C = sign * (raw - zero_counts)"""
+        counts = {"enc1": enc1, "enc2": enc2, "enc3": enc3}
+        axis = self.axes["theta2"]
+        if axis.channel not in counts:
+            raise KeyError(f"แกน 'theta2' ชี้ไปที่ช่อง '{axis.channel}' ซึ่งไม่มี (ใช้ได้: enc1, enc2, enc3)")
+        return axis.sign * (counts[axis.channel] - axis.zero_counts)
 
-        travel = s_home - s  (ระยะที่เข็มเคลื่อนจากตำแหน่งถอยสุด; แทงเข้า = theta2 เพิ่ม = s ลด
-                              ตรงกับเครื่องหมายของ Jacobian ที่ใช้คำนวณแรงบิดเดิม)
-        x      = travel - free_before   (x = 0 เมื่อเข็มแตะผิวหนังพอดี)
+    def needle_travel_mm(self, c: float) -> float:
+        """ระยะที่เข็มเคลื่อนจากตำแหน่งถอยสุด z (mm) = 3·C·D / 400  (C = counts สไลด์, D = Pulley PD mm)"""
+        return 3.0 * c * self.pulley_pd_mm / 400.0
+
+    def depth_from_counts(self, c: float) -> float:
+        """counts สไลด์ C → ความลึก x ของเข็มวัดจากผิวหนัง (เมตร)
+
+        x = z/1000 - free_before   (x = 0 เมื่อเข็มแตะผิวหนังพอดี, x < 0 = ยังลอยอยู่ในระยะฟรี)
         """
-        s_home, _ = self.calculate_kinematics(self.theta_home_deg)
-        return (s_home - s) - self.free_before
+        return self.needle_travel_mm(c) / 1000.0 - self.free_before
 
     def encoders_to_angles(self, enc1: int, enc2: int, enc3: int) -> Tuple[float, float, float]:
         """แปลง counts ของ enc1..enc3 → (pitch, yaw, theta2) เป็นองศา ตามค่า self.axes"""
@@ -443,7 +472,7 @@ class TissueResistanceModel:
 
     def _velocity(self, x: float, timestamp_ms: int) -> float:
         """ความเร็วเข็ม (m/s) จากผลต่างความลึกและผลต่าง timestamp ของเอนโค้ดเดอร์"""
-        # ตัวอย่างแรก หรือนาฬิกาบอร์ดรีเซ็ต (timestamp ถอยหลัง) → เริ่มอ้างอิงใหม่ v = 0 (กัน Ki/Kv พุ่ง)
+        # ตัวอย่างแรก หรือนาฬิกาบอร์ดรีเซ็ต (timestamp ถอยหลัง) → เริ่มอ้างอิงใหม่ v = 0 (กัน V พุ่ง)
         if self.prev_ts_ms is None or timestamp_ms < self.prev_ts_ms:
             v = 0.0
         # ตัวอย่างอยู่ใน ms เดียวกัน (dt = 0) → ใช้ความเร็วล่าสุด ไม่หารศูนย์
@@ -463,6 +492,12 @@ class TissueResistanceModel:
         t = self.client.parse_message("trig_protocol_2", raw_serial_str)
         return self.process_encoder(t["timestamp"], t["enc1"], t["enc2"], t["enc3"])
 
+    @staticmethod
+    def voltage_from_tau(tau_total: float) -> float:
+        """แรงบิดรวม (N·m) → แรงดันเอาต์พุต 0 – V_MAX (V) ปัดทศนิยม 3 ตำแหน่ง (ทำแบบเดียวกันใน haptic_model.js ทุกขั้น)"""
+        v = min(V_MAX, abs(tau_total) / TAU_FULL_SCALE * V_MAX)
+        return math.floor(v * 1000.0 + 0.5) / 1000.0
+
     def process_encoder(self, timestamp_ms: int, enc1: int, enc2: int, enc3: int, touch: Optional[int] = None):
         """ประมวลผลตัวอย่างเอนโค้ดเดอร์ 1 ชุด (รูปแบบเดียวกับที่ EncoderStreamReader.read_data() คืนมา)
 
@@ -476,8 +511,9 @@ class TissueResistanceModel:
         # 2. แปลง counts → มุม แล้วคำนวณ Kinematics และ Update ความลึกสูงสุด (x_max)
         _pitch, yaw_deg, theta2_deg = self.encoders_to_angles(enc1, enc2, enc3)
 
-        s, j_theta2 = self.calculate_kinematics(theta2_deg)
-        x = self.depth_from_s(s)
+        # ระยะเข็มมาจากสูตรพูลเลย์ z = 3CD/400 (ไม่ใช้ slider-crank แล้ว); Jacobian j_theta2 ยังมาจาก calculate_kinematics เดิม
+        _s, j_theta2 = self.calculate_kinematics(theta2_deg)
+        x = self.depth_from_counts(self.slider_counts(enc1, enc2, enc3))
         v = self._velocity(x, timestamp_ms)
         self.x_max = max(self.x_max, x)
 
@@ -490,19 +526,11 @@ class TissueResistanceModel:
 
         tau_total = (f_total + self.M1 * self.G * math.sin(yaw_rad)) * j_theta2
 
-        # 4. แปลงแรงบิดเป็น Gain สำหรับ Gimbal Motor (Ki, Kv)
-        ki = abs(tau_total) * 10.0
-        kv = abs(v) * 2.5 + 0.5
+        # 4. แปลงแรงบิดเป็นแรงดัน V (0 – 3.3 V) | touch = 0 (ไม่สัมผัส) = ปล่อยแรง = 0 V
+        volt = 0.0 if touch == 0 else self.voltage_from_tau(tau_total)
 
-        # 5. กำหนดสถานะ Touch Sensor (0 = ไม่สัมผัส, 1 = สัมผัส)
-        if touch == 0:
-            bp, by = 1, 1  # ปลดล็อก
-        else:
-            bp, by = 0, 0  # ต้านแรง
-
-        # 6. สร้างข้อความ Command ผ่าน SDK ส่งกลับฮาร์ดแวร์
-        command_data = {"Ki": ki, "Kv": kv, "bp": bp, "by": by}
-        return self.client.build_message("trig_protocol_3", command_data)
+        # 5. สร้างข้อความ Command ผ่าน SDK ส่งกลับฮาร์ดแวร์ (Trig Protocol 3: "V")
+        return self.client.build_message("trig_protocol_3", {"V": volt})
 
 # --- ทดสอบจำลองการทำงาน ---
 if __name__ == "__main__":
@@ -515,4 +543,4 @@ if __name__ == "__main__":
     output_cmd = model.process_telemetry(test_input)
 
     print(f"📥 Input (timestamp;enc1;enc2;enc3): {test_input}")
-    print(f"📤 Output Command (Ki;Kv;bp;by): {output_cmd}")
+    print(f"📤 Output Command (V, 0-3.3 V): {output_cmd}")

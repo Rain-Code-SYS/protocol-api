@@ -7,7 +7,7 @@ from unittest import mock
 import requests
 
 from tests.helpers import load_schemas, offline_client
-from tests.telemetry_utils import high_resolution, make_line, theta_for_depth
+from tests.telemetry_utils import expected_voltage, high_resolution, make_line, slider_counts_for_depth
 from tissue_model import TissueResistanceModel
 
 MM = 0.001
@@ -36,11 +36,11 @@ class LayoutTests(unittest.TestCase):
 
     def test_depth_mapping(self):
         m = make_model()
-        self.assertAlmostEqual(m.depth_from_s(m.calculate_kinematics(0.0)[0]), -10 * MM)
+        self.assertAlmostEqual(m.depth_from_counts(0), -10 * MM)
         for x in (-5 * MM, 0.0, 2 * MM, 26 * MM, 34 * MM):
             with self.subTest(x=x):
-                s, _ = m.calculate_kinematics(theta_for_depth(m, x))
-                self.assertAlmostEqual(m.depth_from_s(s), x, places=6)
+                c = slider_counts_for_depth(m, x)
+                self.assertAlmostEqual(m.depth_from_counts(c), x, places=6)
 
 
 class FreeZoneForceTests(unittest.TestCase):
@@ -81,7 +81,7 @@ class LungFlagTests(unittest.TestCase):
     def run_depths(self, model, depths):
         for x in depths:
             model._test_ts = getattr(model, "_test_ts", 0) + 10  # timestamp เดินหน้าทีละ 10 ms
-            model.process_telemetry(make_line(model, theta_for_depth(model, x), model._test_ts))
+            model.process_telemetry(make_line(model, slider_counts_for_depth(model, x), model._test_ts))
 
     def test_threshold_between_33_and_35mm(self):
         m = make_model()
@@ -111,9 +111,11 @@ class LungFlagTests(unittest.TestCase):
 
     def test_first_sample_has_zero_velocity(self):
         m = make_model()
-        first = m.process_telemetry(make_line(m, theta_for_depth(m, 2 * MM), 1000))
-        # ตัวอย่างแรก v = 0 → Kv = 0.5 พอดี (ไม่พุ่งผิดปกติ)
-        self.assertAlmostEqual(float(first.split(";")[1]), 0.5)
+        line = make_line(m, slider_counts_for_depth(m, 2 * MM), 1000)
+        first = m.process_telemetry(line)
+        # ตัวอย่างแรก v = 0 → มีแต่แรงสปริงผิวหนัง (ไม่มีแรงเสียดทานพุ่งผิดปกติ)
+        enc = tuple(int(p) for p in line.split(";")[1:])
+        self.assertAlmostEqual(float(first), expected_voltage(m, enc, 0.0, 0.0), delta=0.0006)
 
     def test_post_sends_protocol4_value(self):
         m = make_model()

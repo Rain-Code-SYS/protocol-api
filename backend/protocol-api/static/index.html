@@ -860,7 +860,7 @@ const wsSupported = 'serial' in navigator;
 const ws = {running: false, port: null, reader: null, done: null, latest: null, latestAt: 0, dirty: false, sending: false, timer: null, bad: 0, lastRaw: ''};
 const WS_INT = /^\s*[+-]?\d+\s*$/;
 
-// ---- แรงสะท้อนกลับ (Trig Protocol 3: Ki;Kv;bp;by): คำนวณในเบราว์เซอร์ แล้วเขียนกลับบอร์ดทันทีที่อ่านตัวอย่างได้ ไม่ผ่านเซิร์ฟเวอร์ ----
+// ---- แรงสะท้อนกลับ (Trig Protocol 3: แรงดัน V 0-3.3): คำนวณในเบราว์เซอร์ แล้วเขียนกลับบอร์ดทันทีที่อ่านตัวอย่างได้ ไม่ผ่านเซิร์ฟเวอร์ ----
 // เส้นทางสั้นที่สุด: อ่านบรรทัด -> HapticModel.processEncoder -> writer.write (ไม่มี fetch/timer คั่น)
 // ถ้าบอร์ดรับช้ากว่าสตรีม จะไม่สะสมคิว: เก็บเฉพาะคำสั่งล่าสุด (คำสั่งเก่าที่ยังไม่ได้ส่งถูกทิ้ง)
 const haptic = {model: new HapticModel(), active: false, writer: null, writing: false, pending: null, last: null, sent: 0, lastSent: 0, hz: 0};
@@ -885,7 +885,7 @@ async function hapticFlush(){
   } catch (e) { haptic.active = false; haptic.pending = null; }
   haptic.writing = false;
 }
-function hapticRelease(){    // หยุดแรง: Ki=0 และปลดล็อก (ส่งเฉพาะเมื่อเคยส่งคำสั่งแรงไปแล้ว)
+function hapticRelease(){    // หยุดแรง: V=0 (ส่งเฉพาะเมื่อเคยส่งคำสั่งแรงไปแล้ว)
   if (!haptic.writer || haptic.last === null || haptic.last === HapticModel.RELEASE_COMMAND) return;
   haptic.pending = HapticModel.RELEASE_COMMAND;
   if (!haptic.writing) hapticFlush();

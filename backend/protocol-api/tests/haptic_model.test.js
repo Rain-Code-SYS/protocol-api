@@ -26,12 +26,8 @@ for (const c of vectors.cases) {
       else {
         const [e1, e2, e3] = s.e;
         const cmd = m.processEncoder(s.ts, e1, e2, e3, s.touch);
-        const got = cmd.split(';'), want = s.cmd.split(';');
-        assert.equal(got.length, 4, cmd);
-        close(Number(got[0]), Number(want[0]), `Ki @${n}`);
-        close(Number(got[1]), Number(want[1]), `Kv @${n}`);
-        assert.equal(got[2], want[2], `bp @${n}`);
-        assert.equal(got[3], want[3], `by @${n}`);
+        assert.equal(cmd.split(';').length, 1, cmd);   // Trig Protocol 3 = แรงดัน V ค่าเดียว
+        assert.equal(cmd, s.cmd, `V @${n}`);           // ข้อความต้องตรงกับ Python ทุกตัวอักษร
         const p = m.pose(e1, e2, e3);
         for (const k of Object.keys(s.pose)) close(p[k], s.pose[k], `${k} @${n}`);
         assert.equal(m.lung_hit, s.lung, `lung @${n}`);
@@ -43,12 +39,12 @@ for (const c of vectors.cases) {
   });
 }
 
-test('คำสั่งมี 4 ฟิลด์เสมอและ Ki/Kv ไม่ติดลบ', () => {
+test('คำสั่งเป็นค่าเดียวและอยู่ในช่วง 0 - 3.3 V', () => {
   const m = new HapticModel();
   for (const e3 of [0, 100, 398, 700, 1500, -300]) {
-    const f = m.processEncoder(1000 + e3, 0, 0, e3).split(';');
-    assert.equal(f.length, 4);
-    assert.ok(Number(f[0]) >= 0 && Number(f[1]) >= 0.5);
+    const out = m.processEncoder(1000 + e3, 0, 0, e3), v = Number(out);
+    assert.equal(out.split(';').length, 1);
+    assert.ok(v >= 0 && v <= 3.3, out);
   }
 });
 
@@ -72,6 +68,7 @@ test('onLungChange ถูกเรียกเฉพาะตอนสถาน�
   assert.deepEqual(events, [true, false]);
 });
 
-test('RELEASE_COMMAND เป็นรูปแบบ Trig Protocol 3', () => {
-  assert.equal(HapticModel.RELEASE_COMMAND.split(';').length, 4);
+test('RELEASE_COMMAND = 0 V (Trig Protocol 3)', () => {
+  assert.equal(HapticModel.RELEASE_COMMAND, '0.0');
+  assert.equal(new HapticModel().processEncoder(1000, 0, 0, 0, 0), '0.0');
 });

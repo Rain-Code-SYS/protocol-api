@@ -28,8 +28,7 @@ class HapticVectorsUpToDate(unittest.TestCase):
                         self.assertEqual(a, b)
                         continue
                     self.assertEqual((a["ts"], a["e"], a["touch"], a["lung"]), (b["ts"], b["e"], b["touch"], b["lung"]))
-                    ca, cb = a["cmd"].split(";"), b["cmd"].split(";")
-                    self.assertTrue(close(float(ca[0]), float(cb[0])) and close(float(ca[1]), float(cb[1])) and ca[2:] == cb[2:], (a["cmd"], b["cmd"]))
+                    self.assertEqual(a["cmd"], b["cmd"])   # แรงดัน V ปัดทศนิยม 3 ตำแหน่ง: ข้อความต้องตรงกันทุกตัวอักษร
                     for k in a["pose"]:
                         self.assertTrue(close(a["pose"][k], b["pose"][k]), k)
 

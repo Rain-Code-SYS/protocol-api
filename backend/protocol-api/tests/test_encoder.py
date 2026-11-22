@@ -6,7 +6,7 @@ from unittest import mock
 import encoder_reader
 from encoder_reader import EncoderStreamReader
 from tests.helpers import offline_client
-from tests.telemetry_utils import high_resolution, make_line, theta_for_depth
+from tests.telemetry_utils import expected_voltage, high_resolution, make_line, slider_counts_for_depth
 from tissue_model import AxisCalibration, TissueResistanceModel
 
 MM = 0.001
@@ -185,48 +185,78 @@ class AxisCalibrationTests(unittest.TestCase):
 
 
 class ProcessEncoderTests(unittest.TestCase):
-    def kv(self, out):
-        return float(out.split(";")[1])
+    """Trig Protocol 3 = แรงดัน V ค่าเดียว (0 – 3.3 V): ปล่อยแรง (touch = 0) = 0 V"""
+
+    @staticmethod
+    def volt(out):
+        return float(out)
 
     def test_process_encoder_matches_process_telemetry(self):
         a, b = make_model(), make_model()
-        line = make_line(a, theta_for_depth(a, 5 * MM), 1000)
+        line = make_line(a, slider_counts_for_depth(a, 5 * MM), 1000)
         ts, e1, e2, e3 = EncoderStreamReader.parse_line(line)
         self.assertEqual(a.process_telemetry(line), b.process_encoder(ts, e1, e2, e3))
 
     def test_reader_tuple_can_be_unpacked(self):
         m = make_model()
-        sample = EncoderStreamReader.parse_line(make_line(m, theta_for_depth(m, 5 * MM), 1000))
-        self.assertEqual(len(m.process_encoder(*sample).split(";")), 4)
+        sample = EncoderStreamReader.parse_line(make_line(m, slider_counts_for_depth(m, 5 * MM), 1000))
+        out = m.process_encoder(*sample)
+        self.assertEqual(len(out.split(";")), 1)          # ค่าเดียว ไม่มีตัวคั่น
+        self.assertTrue(0.0 <= self.volt(out) <= 3.3)
+
+    def test_output_is_voltage_from_torque(self):
+        m = make_model()
+        enc = EncoderStreamReader.parse_line(make_line(m, slider_counts_for_depth(m, 2 * MM), 1000))[1:]
+        want = expected_voltage(m, enc, 0.0, 0.0)   # ตัวอย่างแรก v = 0 ที่ลึก 2 mm = แรงสปริงผิวหนังล้วน
+        self.assertGreater(want, 0.0)
+        self.assertAlmostEqual(self.volt(m.process_encoder(1000, *enc)), want, delta=0.0006)
 
     def test_velocity_uses_encoder_timestamps(self):
         m = make_model()
-        m.process_telemetry(make_line(m, theta_for_depth(m, 2 * MM), 1000))
-        out = m.process_telemetry(make_line(m, theta_for_depth(m, 3 * MM), 1010))
-        # ลึกขึ้น 1 mm ใน 10 ms = 0.1 m/s → Kv = 0.1*2.5 + 0.5 (ไม่ขึ้นกับเวลาจริงของเครื่อง)
-        self.assertAlmostEqual(self.kv(out), 0.75, places=4)
+        m.process_telemetry(make_line(m, slider_counts_for_depth(m, 2 * MM), 1000))
+        line = make_line(m, slider_counts_for_depth(m, 3 * MM), 1010)
+        enc = EncoderStreamReader.parse_line(line)[1:]
+        want = expected_voltage(m, enc, 0.1, 3 * MM)   # ลึกขึ้น 1 mm ใน 10 ms = 0.1 m/s (ไม่ขึ้นกับเวลาจริงของเครื่อง)
+        self.assertAlmostEqual(self.volt(m.process_telemetry(line)), want, delta=0.01)
+        slow = make_model()   # เวลาห่างขึ้น 10 เท่า → ความเร็วน้อยลง → แรงเสียดทานน้อยลง → V ต่างกัน
+        slow.process_telemetry(make_line(slow, slider_counts_for_depth(slow, 2 * MM), 1000))
+        slow_v = self.volt(slow.process_telemetry(make_line(slow, slider_counts_for_depth(slow, 3 * MM), 1100)))
+        self.assertNotAlmostEqual(slow_v, want, delta=0.01)
 
     def test_same_millisecond_keeps_last_velocity(self):
         m = make_model()
-        m.process_telemetry(make_line(m, theta_for_depth(m, 2 * MM), 1000))
-        m.process_telemetry(make_line(m, theta_for_depth(m, 3 * MM), 1010))
-        out = m.process_telemetry(make_line(m, theta_for_depth(m, 3.2 * MM), 1010))
-        self.assertAlmostEqual(self.kv(out), 0.75, places=4)
+        m.process_telemetry(make_line(m, slider_counts_for_depth(m, 2 * MM), 1000))
+        m.process_telemetry(make_line(m, slider_counts_for_depth(m, 3 * MM), 1010))
+        line = make_line(m, slider_counts_for_depth(m, 3.2 * MM), 1010)
+        enc = EncoderStreamReader.parse_line(line)[1:]
+        want = expected_voltage(m, enc, 0.1, 3.2 * MM)   # ms เดียวกัน: ใช้ความเร็วล่าสุด (0.1 m/s)
+        self.assertAlmostEqual(self.volt(m.process_telemetry(line)), want, delta=0.01)
 
     def test_clock_reset_restarts_velocity(self):
         m = make_model()
-        m.process_telemetry(make_line(m, theta_for_depth(m, 2 * MM), 5000))
-        out = m.process_telemetry(make_line(m, theta_for_depth(m, 3 * MM), 20))  # บอร์ดรีเซ็ต
-        self.assertAlmostEqual(self.kv(out), 0.5)
+        m.process_telemetry(make_line(m, slider_counts_for_depth(m, 2 * MM), 5000))
+        line = make_line(m, slider_counts_for_depth(m, 3 * MM), 20)   # บอร์ดรีเซ็ตนาฬิกา: v = 0
+        enc = EncoderStreamReader.parse_line(line)[1:]
+        want = expected_voltage(m, enc, 0.0, 3 * MM)
+        self.assertAlmostEqual(self.volt(m.process_telemetry(line)), want, delta=0.01)
 
-    def test_touch_controls_brake_flags(self):
+    def test_touch_zero_releases_to_zero_volts(self):
         m = make_model()
-        line = make_line(m, theta_for_depth(m, 5 * MM), 1000)
+        line = make_line(m, slider_counts_for_depth(m, 5 * MM), 1000)
         ts, e1, e2, e3 = EncoderStreamReader.parse_line(line)
-        self.assertEqual(m.process_encoder(ts, e1, e2, e3).split(";")[2:], ["0", "0"])           # ค่าเริ่มต้น = ต้านแรง
-        self.assertEqual(m.process_encoder(ts + 10, e1, e2, e3, touch=0).split(";")[2:], ["1", "1"])
+        self.assertGreater(self.volt(m.process_encoder(ts, e1, e2, e3)), 0.0)      # ค่าเริ่มต้น = ต้านแรง
+        self.assertEqual(m.process_encoder(ts + 10, e1, e2, e3, touch=0), "0.0")   # ปล่อยแรง
         m.touch = 0
-        self.assertEqual(m.process_encoder(ts + 20, e1, e2, e3).split(";")[2:], ["1", "1"])
+        self.assertEqual(m.process_encoder(ts + 20, e1, e2, e3), "0.0")
+
+    def test_voltage_is_clamped_and_rounded(self):
+        import tissue_model
+        vf = TissueResistanceModel.voltage_from_tau
+        self.assertEqual(vf(0.0), 0.0)
+        self.assertEqual(vf(-0.5 * tissue_model.TAU_FULL_SCALE), 1.65)                       # ใช้ขนาดของแรงบิด (ไม่สนทิศ)
+        self.assertEqual(vf(10 * tissue_model.TAU_FULL_SCALE), tissue_model.V_MAX)          # ตัดที่ 3.3 V
+        self.assertEqual(vf(1e-9), 0.0)                                                       # ปัดที่ 1 mV: ไม่ออกเลขยกกำลังแบบ 1e-09
+        self.assertEqual(len(str(vf(0.123456789 * tissue_model.TAU_FULL_SCALE)).split(".")[1]) <= 3, True)
 
 
 if __name__ == "__main__":
