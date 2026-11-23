@@ -33,3 +33,11 @@
 
 ## รีเซ็ตบัญชีทั้งหมด
 `python -c "from db import Database; Database().wipe_users()"` (ตั้ง `DATABASE_URL` ก่อนถ้าจะล้างบนเว็บจริง)
+
+## โมเดลร่างกายจริงของหน้า Simulation (BodyParts3D)
+- หน้า Simulation โหลด `static/anatomy/anatomy.json` + `anatomy.bin` (ประมาณ 2.5 MB) ผ่าน `static/anatomy.js` ต้อง commit โฟลเดอร์ `static/anatomy/` ขึ้น Git ด้วย (ไม่ได้อยู่ใน `.gitignore`)
+- ถ้าโหลดไม่ได้ (ไฟล์หาย/ออฟไลน์) หน้าจะใช้ลำตัว ซี่โครง และปอดแบบสูตรเดิมแทนโดยอัตโนมัติ (ดูข้อความ `[Sim]` ใน Console)
+- ข้อความอ้างอิงลิขสิทธิ์ (CC BY 4.0) แสดงมุมขวาล่างของหน้า Simulation ห้ามลบ รายละเอียดอยู่ใน `static/anatomy/ATTRIBUTION.txt`
+- สร้างไฟล์ใหม่จากต้นฉบับ: ดาวน์โหลด `partof_BP3D_4.0_obj_99.zip` จาก https://dbarchive.biosciencedbc.jp/en/bodyparts3d/download.html แตกซิป แล้วรัน
+  `python tools/build_anatomy.py --src <โฟลเดอร์ที่แตกซิป> --out static/anatomy` (ต้องมี numpy และ scipy) จากนั้นรัน `python -m unittest tests.test_anatomy_data` และ `node --test`
+- ปอดและเยื่อหุ้มปอดไม่มีในชุดข้อมูลนี้: ปอดสร้างตอนรันจากผิวจริงลึกเข้าไป `lung_mm` (ค่าจากโมเดลแรง) โดยไม่ล้ำออกนอกกรงซี่โครงและหลบหัวใจ/มีเดียสตินัม

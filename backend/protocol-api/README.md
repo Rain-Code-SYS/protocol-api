@@ -90,3 +90,16 @@ Protocol ID : [trig_protocol_1,trig_protocol_2,trig_protocol_3]
 รูปแบบ (Format) : [JSON,Delimited,Delimited]
 Delimiter : [-,;,;]
 รายละเอียดฟิลด์ : [[age, difficulty, case_type, practice_mode],[p, y, z, zdot, touch, bp, by],[V]]
+
+## โมเดลร่างกายจริง (BodyParts3D)
+
+```text
+tools/build_anatomy.py    สร้าง static/anatomy/ จากไฟล์ OBJ ของ BodyParts3D (ลดโพลีกอน + แปลงเป็นพิกัดผู้ป่วยของซิม)
+tools/bp3d_lib.py         ตัวช่วยอ่าน OBJ / ลดโพลีกอน / ตัดหน้าตัด
+tools/anatomy_io.py       อ่านไฟล์ที่สร้างกลับเป็น numpy (ใช้ในเทสต์)
+static/anatomy.js         โหลดและใช้ข้อมูลในเบราว์เซอร์ (จุดเจาะจากแนวซี่โครงจริง ปอด เมชห่อผิวสำหรับเลือกจุด)
+static/anatomy/           anatomy.json, anatomy.bin, ATTRIBUTION.txt
+```
+
+ข้อมูลกายวิภาค: BodyParts3D, © The Database Center for Life Science, CC Attribution 4.0 International
+(https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html) ข้อมูลถูกดัดแปลงตามที่ระบุใน `static/anatomy/ATTRIBUTION.txt`

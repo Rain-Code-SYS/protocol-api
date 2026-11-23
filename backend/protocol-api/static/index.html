@@ -235,6 +235,7 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
 .sim-banner{position:absolute;left:50%;top:14px;transform:translateX(-50%);padding:8px 18px;border-radius:999px;font-weight:700;color:#fff}
 .sim-banner.ok{background:#1a9c4b}.sim-banner.bad{background:#d23b3b}
 .sim-conn{position:absolute;left:12px;bottom:10px;font-size:.85rem;color:#f0b44c}
+.sim-credit{position:absolute;right:10px;bottom:6px;max-width:60%;text-align:right;font-size:.68rem;line-height:1.25;color:#9aa4b2;opacity:.85;pointer-events:none}
 .sim-panel h2{margin:0 0 12px;font-size:1.15rem}
 .sim-big{font-size:2.6rem;font-weight:800;line-height:1.1}
 .sim-row{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
@@ -441,7 +442,7 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
 <main class="wrap sim" id="view-sim" hidden>
   <div class="sim-head"><h1><span id="simProc"></span> &rsaquo; <span data-i18n="simTitle">Simulation</span></h1><a class="mini" href="#dashboard" data-i18n="simExit">Exit</a></div>
   <div class="sim-grid">
-    <div class="sim-stage" id="simStage"><canvas id="simCv"></canvas><div class="sim-banner" id="simBanner" hidden></div><div class="sim-conn" id="simConn"></div>
+    <div class="sim-stage" id="simStage"><canvas id="simCv"></canvas><div class="sim-banner" id="simBanner" hidden></div><div class="sim-conn" id="simConn"></div><div class="sim-credit" id="simCredit" hidden></div>
       <div class="sim-perf" id="simPerf"><a class="sim-hist" href="#history" data-i18n="simHist">History &amp; Analytics</a>
         <h2 data-i18n="simPerf">Performance &amp; Suggestions</h2>
         <div class="pbox"><div data-i18n="rateLbl">Success Rate</div><div class="pbig" id="simRate">&ndash;</div><span class="sim-chip ok" id="simDelta" hidden></span></div>
@@ -562,6 +563,7 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="/static/haptic_model.js"></script>
+<script src="/static/anatomy.js"></script>
 <script>
 // Trig Protocol (1): INT, bit layout 0b AA DD C MM  (Age | Difficulty | Case | Mode)
 const ORDER = ['age','diff','kase','mode'];
@@ -1170,6 +1172,7 @@ const simNew = () => ({phase: 'idle', score: null, maxX: 0, saved: false, done: 
 const simCv = $('simCv'), simStage = $('simStage');
 let simTimer = null, simBusy = false, simPose = null, simCam = {az: -60, el: 30, zoom: 1, follow: false}, simDrag = null, simDown = null;
 let simRun = simNew(), simSession = [], simTarget = null, simGL = null;
+let ANAT = null;   // โมเดลร่างกายจริง (static/anatomy.js) ถ้าโหลดสำเร็จ จะใช้แทนลำตัว/ซี่โครง/ปอดแบบสูตรเดิม (ที่เหลือไว้เป็นตัวสำรอง)
 
 // ---- รูปร่างลำตัว: หน้าตัด super-ellipse ที่เปลี่ยนตามความสูง z ----
 const SC = {zs: [-0.30, -0.20, -0.10, 0, 0.12, 0.24, 0.30, 0.34], A: [0.17, 0.15, 0.14, 0.165, 0.17, 0.19, 0.12, 0.055], B: [0.09, 0.085, 0.08, 0.11, 0.11, 0.095, 0.07, 0.05], n: 2.6};
@@ -1186,13 +1189,15 @@ const ribZ = (k, c) => ribZ0(k) - ribDrop(k) * (1 + c) / 2;   // ระดับ
 const SIM_SITE = {ribTop: 3, ribBot: 6, minY: 0.07};
 const SIM_PICK_ANYWHERE = true;   // false = คลิกนอกโซนไม่ได้ | true = คลิกได้ทุกที่ แต่ถ้าเจาะนอกโซนจะเฟลทันทีที่เข็มแตะผิว
 function simSiteOk(p){   // p = [x, y, z] ในพิกัดตัวผู้ป่วย
+  if (ANAT) return ANAT.siteOk(p, SIM_SITE);   // แนวซี่โครงจริง
   const B = secAB(p[2])[1];
   if (p[0] <= 0 || Math.abs(p[1]) < SIM_SITE.minY) return false;
   const c = spow(p[0] / B, SC.n / 2);   // cosθ ของจุดบนผิว (ย้อนจาก ringPt)
   return p[2] > ribZ(SIM_SITE.ribBot, c) && p[2] < ribZ(SIM_SITE.ribTop, c);
 }
-function ringPt(z, th, inset){ const [A, B] = secAB(z); return [(B - inset) * spow(Math.cos(th), 2 / SC.n), (A - inset) * spow(Math.sin(th), 2 / SC.n), z]; }   // th=0 → หน้าอก (+X), th=π → หลัง
+function ringPt(z, th, inset){ if (ANAT) return ANAT.skinPoint(z, th, inset); const [A, B] = secAB(z); return [(B - inset) * spow(Math.cos(th), 2 / SC.n), (A - inset) * spow(Math.sin(th), 2 / SC.n), z]; }   // th=0 → หน้าอก (+X), th=π → หลัง
 function skinNormal(p){   // เวกเตอร์ตั้งฉากผิว (ชี้ออก) = เกรเดียนต์ของ f = |x/B|^n + |y/A|^n
+  if (ANAT) return ANAT.skinNormal(p);
   const n = SC.n, e = 1e-3, [A, B] = secAB(p[2]);
   const f = z => { const [a, b] = secAB(z); return Math.pow(Math.abs(p[0] / b), n) + Math.pow(Math.abs(p[1] / a), n); };
   const g = [n * spow(p[0] / B, n - 1) / B, n * spow(p[1] / A, n - 1) / A, (f(p[2] + e) - f(p[2] - e)) / (2 * e)];
@@ -1290,13 +1295,50 @@ function simInitGL(){
   scene.add(needle);   // ปลายเข็มอยู่ที่ origin ของกลุ่ม ชี้ +Y
   const mline = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({color: 0xffd166}));
   mline.frustumCulled = false; scene.add(mline);
-  simGL = {renderer, scene, camera, patient, skin, zone, body, ribs, lungs, target, guide, needle, nm, mline, lungMat: mat(0xe58a9a, 0.8), lungMm: 0, w: 0, h: 0, ray: new THREE.Raycaster()};
-  const bed = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.6, 0.02), mat(0x2b4a66, 1)); bed.position.set(0.35, 0, -0.13); scene.add(bed);   // เตียง
+  simGL = {renderer, scene, camera, patient, skin, zone, body, ribs, lungs, target, guide, needle, nm, mline, lungMat: mat(0xe58a9a, 0.8), lungMm: 0, w: 0, h: 0, ray: new THREE.Raycaster(), mat, skinMat, userPicked: false};
+  const bed = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.6, 0.02), mat(0x2b4a66, 1)); bed.position.set(0.35, 0, -0.13); scene.add(bed); simGL.bed = bed;   // เตียง
   scene.updateMatrixWorld(true);
   simSetTarget([-0.11, -0.10, 1], [0, 0, -1]);   // จุดเจาะตั้งต้น: หน้าอกด้านขวาของผู้ป่วย ในโซนเจาะ (ช่องซี่โครงที่ 5) ถ้ายังไม่ได้เลือกด้วย Pointer
+  if (typeof Anatomy !== 'undefined') Anatomy.load('/static/anatomy/').then(simAttachAnatomy).catch(e => console.warn('[Sim] โหลดโมเดลร่างกายจริงไม่ได้ ใช้โมเดลสูตรเดิมแทน:', e));
   return simGL;
 }
+function simAttachAnatomy(A){   // สลับลำตัว/กระดูก/อวัยวะ/โซนเจาะ/ปอดเป็นโมเดลจริง (BodyParts3D) ที่โหลดมาแล้ว
+  const G = simGL;
+  if (!G || ANAT === A) return;
+  const mat = G.mat, P = G.patient;
+  const built = A.build(THREE, {
+    skin: G.skinMat(), bone: mat(0xe9e4d4, 1), cart: mat(0xcfc7ae, 1), sternum: mat(0xe9e4d4, 1),
+    heart: mat(0xb5384a, 0.95, {shininess: 40}), vessel: mat(0x9c3b5a, 1), liver: mat(0x8a4b38, 0.9), stomach: mat(0xd9a5a5, 0.85),
+    diaphragm: mat(0xc98f86, 0.45, {depthWrite: false}), airway: new THREE.MeshPhongMaterial({color: 0xcdbba0}), esoph: mat(0xc79a73, 1),
+    default: mat(0xcccccc, 1)});
+  [G.skin, G.body, G.ribs, G.zone, G.lungs].forEach(o => P.remove(o));
+  G.skin = built.skin; G.body = new THREE.Group(); G.ribs = built.bones;
+  G.lungs = new THREE.Group(); G.lungsDyn = new THREE.Group(); G.lungs.add(built.organs); G.lungs.add(G.lungsDyn);
+  G.pick = A.buildPick(THREE);
+  const zone = new THREE.Group();
+  [-1, 1].forEach(sd => {
+    const {pos, idx} = A.zoneGrid(sd, 0.0008), g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+    zone.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({color: 0x34d27b, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false})));
+  });
+  G.zone = zone;
+  [G.skin, G.body, G.ribs, G.zone, G.lungs, G.pick].forEach(o => P.add(o));
+  G.bed.position.z = A.landmarks.backX - 0.01;   // เตียงรับหลังทรวงอกจริง
+  ANAT = A; G.lungMm = 0;
+  const c = $('simCredit'); if (c) { c.textContent = A.attribution; c.hidden = false; }
+  G.scene.updateMatrixWorld(true);
+  if (!G.userPicked) {   // จุดเจาะตั้งต้น = ช่องซี่โครงที่ 5 ด้านขวา (อยู่ในโซนเจาะเสมอ)
+    const d = A.defaultSite(-1, 75), S = P.localToWorld(new THREE.Vector3(...d.point)), N = new THREE.Vector3(...d.normal).applyQuaternion(P.quaternion);
+    simSetTarget([S.x + N.x * 0.3, S.y + N.y * 0.3, S.z + N.z * 0.3], [-N.x, -N.y, -N.z]);
+  }
+  simRender();
+}
 function simBuildLungs(mm){   // ปอดซ้าย/ขวา: ผิวลำตัวหดเข้าไป lung_mm (ตรงกับระยะที่โมเดลถือว่าเริ่มโดนปอด)
+  if (ANAT) {   // โมเดลจริง: ปอดหดจากผิวจริง lung_mm แต่ไม่ล้ำออกนอกกรงซี่โครงและหลบหัวใจ/มีเดียสตินัม (หัวใจ หลอดลม ฯลฯ เป็นเมชจริงอยู่แล้ว)
+    const dyn = simGL.lungsDyn; while (dyn.children.length) dyn.remove(dyn.children[0]);
+    [-1, 1].forEach(sd => dyn.add(new THREE.Mesh(tubeGeo(ANAT.lungRings(sd, mm / 1000).rings), simGL.lungMat)));
+    simGL.lungMm = mm; return;
+  }
   const g = simGL.lungs; while (g.children.length) g.remove(g.children[0]);
   const inset = mm / 1000, zc = 0.15, h = 0.13;
   [-1, 1].forEach(sd => {
@@ -1322,7 +1364,7 @@ function simSetTarget(origin, dir){   // ยิงรังสีเข้าห
   return simHit();
 }
 function simHit(){
-  const hit = simGL.ray.intersectObject(simGL.skin)[0];
+  const hit = simGL.ray.intersectObject(simGL.pick || simGL.skin)[0];   // โมเดลจริง: ยิงกับเมชห่อลำตัว (ไม่ติดแขน)
   if (!hit) return false;
   const P = simGL.patient, loc = P.worldToLocal(hit.point.clone());   // เวกเตอร์ตั้งฉากคำนวณในพิกัดตัวผู้ป่วย แล้วหมุนกลับเป็นพิกัดโลก
   const site = simSiteOk([loc.x, loc.y, loc.z]);
@@ -1337,7 +1379,7 @@ function simPick(cx, cy){
   simGL.ray.setFromCamera(new THREE.Vector2((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height * 2 - 1)), simGL.camera);
   const res = simHit();
   if (res === 'off') { $('simNote').textContent = t('simOffSite'); return; }
-  if (res) { simNewRound(true); $('simNote').textContent = ''; simRender(); }
+  if (res) { simGL.userPicked = true; simNewRound(true); $('simNote').textContent = ''; simRender(); }
 }
 
 function simDerive(p){

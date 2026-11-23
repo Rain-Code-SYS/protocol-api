@@ -1,0 +1,17 @@
+BodyParts3D, (c) The Database Center for Life Science
+licensed under CC Attribution 4.0 International
+https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html
+
+Source data: partof_BP3D_4.0_obj_99 (https://dbarchive.biosciencedbc.jp/en/bodyparts3d/download.html)
+
+Modifications (made by this project, tools/build_anatomy.py):
+  - coordinate transform to the simulator patient frame (metres), origin at the rib-cage mid-depth
+  - mesh simplification (quadric vertex clustering) and 16-bit quantisation
+  - skin kept as the outer shell only; ventricular cavities inflated by 8 mm to approximate the myocardium
+  - derived lookup tables (torso cross-sections, rib-line heights) used for site selection and lung generation
+  - lungs are NOT part of BodyParts3D partof_BP3D_4.0_obj_99: they are generated procedurally at run time
+
+Note on licence text: the header of each OBJ file in the downloaded archive still cites
+"Creative Commons Attribution-Share Alike 2.1 Japan", while the licence page of the database (updated 2025-02-27)
+states CC Attribution 4.0 International. Check https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html
+before redistributing, and keep both notices if in doubt. This file is not legal advice.
