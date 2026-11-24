@@ -40,4 +40,6 @@
 - ข้อความอ้างอิงลิขสิทธิ์ (CC BY 4.0) แสดงมุมขวาล่างของหน้า Simulation ห้ามลบ รายละเอียดอยู่ใน `static/anatomy/ATTRIBUTION.txt`
 - สร้างไฟล์ใหม่จากต้นฉบับ: ดาวน์โหลด `partof_BP3D_4.0_obj_99.zip` จาก https://dbarchive.biosciencedbc.jp/en/bodyparts3d/download.html แตกซิป แล้วรัน
   `python tools/build_anatomy.py --src <โฟลเดอร์ที่แตกซิป> --out static/anatomy` (ต้องมี numpy และ scipy) จากนั้นรัน `python -m unittest tests.test_anatomy_data` และ `node --test`
+- ห้องทำหัตถการสร้างจาก `static/procedure_room.js` (ไฟล์เดียว ไม่ต้องมีรูป/โมเดลเพิ่ม) ผ้าคลุมและหมอนปรับตามขาและท้ายทอยของโมเดลจริงใน `anatomy.json` (`env`) ปรับผังได้ที่ฟังก์ชัน `layout()` ในไฟล์นั้น
+- ผิวหนังของ BodyParts3D เป็นเปลือก 2 ชั้น `build_anatomy.py` จึงแยกชั้นนอกออกและเก็บเฉพาะผิวนอก (ลดโพลีกอน 4 mm) ถ้าผิวกลับมาขรุขระ ให้รัน `python -m unittest tests.test_anatomy_data` (มีเทสต์ความเรียบของผิว)
 - ปอดและเยื่อหุ้มปอดไม่มีในชุดข้อมูลนี้: ปอดสร้างตอนรันจากผิวจริงลึกเข้าไป `lung_mm` (ค่าจากโมเดลแรง) โดยไม่ล้ำออกนอกกรงซี่โครงและหลบหัวใจ/มีเดียสตินัม

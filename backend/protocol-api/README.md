@@ -98,6 +98,7 @@ tools/build_anatomy.py    สร้าง static/anatomy/ จากไฟล์ 
 tools/bp3d_lib.py         ตัวช่วยอ่าน OBJ / ลดโพลีกอน / ตัดหน้าตัด
 tools/anatomy_io.py       อ่านไฟล์ที่สร้างกลับเป็น numpy (ใช้ในเทสต์)
 static/anatomy.js         โหลดและใช้ข้อมูลในเบราว์เซอร์ (จุดเจาะจากแนวซี่โครงจริง ปอด เมชห่อผิวสำหรับเลือกจุด)
+static/procedure_room.js  ห้องทำหัตถการรอบเตียง (เตียง หมอน ผ้าคลุม โคมผ่าตัด แท่งเครื่องมือ เสาน้ำเกลือ จอมอนิเตอร์ เคาน์เตอร์ ประตู)
 static/anatomy/           anatomy.json, anatomy.bin, ATTRIBUTION.txt
 ```
 

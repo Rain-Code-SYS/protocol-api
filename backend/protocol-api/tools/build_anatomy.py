@@ -40,7 +40,7 @@ SLICE_Z_BP = (880.0, 1420.0)   # ช่วง z ของ BodyParts3D ที่�
 # (id, กลุ่ม/วัสดุ, ตัวเลือกไฟล์, cell mm ของการลดโพลีกอน หรือ None = ไม่ลด, inflate mm)
 CELL = {"rib": 2.5, "cart": 2.5, "sternum": 2.0, "clav": 2.0, "scap": 4.0, "humerus": 3.0, "vert": 3.0,
         "sacrum": 3.5, "diaphragm": 6.0, "liver": 5.0, "stomach": 4.0, "heart": 3.0, "vessel": 2.0,
-        "airway": None, "esoph": 1.5, "skin": 10.0}
+        "airway": None, "esoph": 1.5, "skin": 4.0}
 
 
 def pick(by_name, pattern):
@@ -52,8 +52,16 @@ def pick(by_name, pattern):
     return sorted(out, key=lambda t: (t[0], t[1]))
 
 
+def compact(v, f):
+    used = np.unique(f)
+    remap = -np.ones(len(v), dtype=np.int64)
+    remap[used] = np.arange(len(used))
+    return v[used], remap[f].astype(np.int32)
+
+
 def outer_shell(v, f):
-    """ผิวหนังของ BodyParts3D เป็นเปลือก 2 ชั้น (ผิวนอก + ผิวใน): เก็บเฉพาะก้อนที่ใหญ่ที่สุด (ผิวนอก)"""
+    """เก็บเฉพาะก้อนผิวที่ใหญ่ที่สุด (ตัดชิ้นเศษ) -- ผิวหนังของ BodyParts3D เป็นเปลือก 2 ชั้นที่เชื่อมกันที่ปากช่อง
+    จึงต้องแยกชั้นในออกอีกขั้นด้วย B.classify_outer_faces"""
     n = len(v)
     e = np.vstack([f[:, [0, 1]], f[:, [1, 2]], f[:, [2, 0]]])
     g = coo_matrix((np.ones(len(e)), (e[:, 0], e[:, 1])), shape=(n, n))
@@ -189,6 +197,17 @@ def main():
     # ---------- ผิวหนัง (เปลือกนอก) ----------
     sv, sf = load(skin_paths)
     sv, sf, ncomp = outer_shell(sv, sf)
+    keep = B.classify_outer_faces(sv, sf)             # ตัดผิวชั้นในทิ้ง (ไม่งั้นลดโพลีกอนแล้วสองชั้นปนกันเป็นผิวหยัก)
+    n_shell = len(sf)
+    sv, sf = compact(sv, sf[keep])
+    n_outer = len(sf)
+    sv, sf = B.drop_spiky_faces(sv, sf)               # เศษพับแหลมตรงเบ้าตา/ขาหนีบ
+    # เปลือกตาในข้อมูลต้นฉบับเป็นรอยหยัก: ตัดเศษแหลมเฉพาะบริเวณใบหน้าให้เข้มขึ้น แล้วปิดรูเล็กรอบตา (รูใหญ่ เช่น ข้อมือ คอ ไม่ปิด)
+    # ที่ระดับ z ≈ 1513-1526 มีแผ่นราบเล็กๆ ลอยอยู่ในหัว (รอยต่อของชิ้นผิว) โผล่ตรงเปลือกตา: ตัดทิ้ง
+    sf = B.drop_small_smooth_components(sv, sf, lambda c: (c[:, 2] > 1500) & (c[:, 2] < 1540), 500)
+    sv, sf = compact(sv, sf)
+    sv, sf = B.fill_small_holes(sv, sf, 160.0)
+    print(f"skin: outer faces {n_outer:,} / {n_shell:,} -> {len(sf):,} after cleanup; roughness {B.roughness_deg(sv, sf):.2f} deg")
     skin_full = (sv.copy(), sf.copy())
     sv_s, sf_s = B.cluster_simplify(sv, sf, CELL["skin"])
     pack.add("skin", "skin", "Skin", to_patient(sv_s), sf_s)
@@ -364,6 +383,26 @@ def main():
     back_x = float(skin_t[torso, 0].min())
     landmarks = {"notchZ": NOTCH_Z, "backX": round(back_x, 5), "ztopBp": ztop, "y0Bp": y0}
 
+    # ---------- ข้อมูลสำหรับฉากห้อง: โปรไฟล์ขา (ผ้าคลุมผู้ป่วย) และท้ายทอย (หมอน) ----------
+    leg = np.abs(skin_t[:, 1]) < 0.21                       # ตัดแขน/มือที่ห้อยข้างลำตัวออก
+    env_z = np.arange(-1.26, -0.039, 0.04)
+    half_w, ant_x = [], []
+    for z in env_z:
+        m = leg & (np.abs(skin_t[:, 2] - z) < 0.03)
+        half_w.append(float(np.abs(skin_t[m, 1]).max()) if m.any() else np.nan)
+        ant_x.append(float(skin_t[m, 0].max()) if m.any() else np.nan)
+    half_w, ant_x = np.array(half_w), np.array(ant_x)
+    for arr in (half_w, ant_x):
+        ok_ = ~np.isnan(arr)
+        arr[:] = np.interp(env_z, env_z[ok_], arr[ok_])
+    half_w = uniform_filter1d(half_w, size=3, mode="nearest")
+    ant_x = uniform_filter1d(ant_x, size=3, mode="nearest")
+    head = (skin_t[:, 2] > 0.40) & (skin_t[:, 2] < 0.56)
+    env = {"z0": round(float(env_z[0]), 4), "dz": 0.04, "n": int(len(env_z)),
+           "halfWidthMm": [int(round(x * 1000)) for x in half_w], "anteriorXMm": [int(round(x * 1000)) for x in ant_x],
+           "headBackX": round(float(skin_t[head, 0].min()), 4), "headTopZ": round(float(skin_t[:, 2].max()), 4),
+           "footZ": round(float(skin_t[:, 2].min()), 4)}
+
     with open(os.path.join(args.out, "anatomy.bin"), "wb") as fh:
         fh.write(pack.buf)
     manifest = {
@@ -371,7 +410,7 @@ def main():
         "units": "m, patient frame (x anterior, y patient-left, z superior)",
         "attribution": "BodyParts3D, © The Database Center for Life Science, licensed under CC Attribution 4.0 International "
                        "(https://dbarchive.biosciencedbc.jp/en/bodyparts3d/lic.html). Modified: coordinate transform, mesh simplification.",
-        "meshes": pack.meshes, "polar": polar, "ribs": ribs, "landmarks": landmarks, "binBytes": len(pack.buf),
+        "meshes": pack.meshes, "polar": polar, "ribs": ribs, "landmarks": landmarks, "env": env, "binBytes": len(pack.buf),
     }
     with open(os.path.join(args.out, "anatomy.json"), "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, separators=(",", ":"))

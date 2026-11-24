@@ -564,6 +564,7 @@ td.empty{text-align:center;color:var(--muted);padding:28px 12px;white-space:norm
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="/static/haptic_model.js"></script>
 <script src="/static/anatomy.js"></script>
+<script src="/static/procedure_room.js"></script>
 <script>
 // Trig Protocol (1): INT, bit layout 0b AA DD C MM  (Age | Difficulty | Case | Mode)
 const ORDER = ['age','diff','kase','mode'];
@@ -1299,8 +1300,22 @@ function simInitGL(){
   const bed = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.6, 0.02), mat(0x2b4a66, 1)); bed.position.set(0.35, 0, -0.13); scene.add(bed); simGL.bed = bed;   // เตียง
   scene.updateMatrixWorld(true);
   simSetTarget([-0.11, -0.10, 1], [0, 0, -1]);   // จุดเจาะตั้งต้น: หน้าอกด้านขวาของผู้ป่วย ในโซนเจาะ (ช่องซี่โครงที่ 5) ถ้ายังไม่ได้เลือกด้วย Pointer
+  scene.background = new THREE.Color(0x0e141b); camera.far = 12; camera.updateProjectionMatrix();   // ห้องทำหัตถการกว้างกว่าฉากเดิม
+  simBuildRoom();   // ห้องทำหัตถการ (ผังตั้งต้น จะปรับตามโมเดลร่างกายจริงเมื่อโหลดเสร็จ)
   if (typeof Anatomy !== 'undefined') Anatomy.load('/static/anatomy/').then(simAttachAnatomy).catch(e => console.warn('[Sim] โหลดโมเดลร่างกายจริงไม่ได้ ใช้โมเดลสูตรเดิมแทน:', e));
   return simGL;
+}
+function simBuildRoom(){   // ห้องทำหัตถการรอบเตียง: เตียง หมอน ผ้าคลุม โคม แท่งเครื่องมือ เสาน้ำเกลือ จอมอนิเตอร์ เคาน์เตอร์ ประตู (static/procedure_room.js)
+  const G = simGL;
+  if (!G || typeof ProcedureRoom === 'undefined') return;   // ไม่มีโมดูลห้อง: ใช้เตียงเดิม
+  if (G.room) {
+    G.scene.remove(G.room);
+    G.room.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
+  }
+  const L = ProcedureRoom.layout({backX: ANAT ? ANAT.landmarks.backX : undefined, env: ANAT ? ANAT.manifest.env : undefined});
+  G.room = ProcedureRoom.build(THREE, L, {canvas: () => document.createElement('canvas')});
+  G.scene.add(G.room);
+  if (G.bed) G.bed.visible = false;   // เตียงเดิมถูกแทนด้วยเตียงหัตถการในห้อง
 }
 function simAttachAnatomy(A){   // สลับลำตัว/กระดูก/อวัยวะ/โซนเจาะ/ปอดเป็นโมเดลจริง (BodyParts3D) ที่โหลดมาแล้ว
   const G = simGL;
@@ -1325,6 +1340,7 @@ function simAttachAnatomy(A){   // สลับลำตัว/กระดู�
   [G.skin, G.body, G.ribs, G.zone, G.lungs, G.pick].forEach(o => P.add(o));
   G.bed.position.z = A.landmarks.backX - 0.01;   // เตียงรับหลังทรวงอกจริง
   ANAT = A; G.lungMm = 0;
+  simBuildRoom();   // สร้างห้องใหม่ให้ผิวเบาะตรงหลังผู้ป่วยจริง พร้อมผ้าคลุมตามขาจริง
   const c = $('simCredit'); if (c) { c.textContent = A.attribution; c.hidden = false; }
   G.scene.updateMatrixWorld(true);
   if (!G.userPicked) {   // จุดเจาะตั้งต้น = ช่องซี่โครงที่ 5 ด้านขวา (อยู่ในโซนเจาะเสมอ)

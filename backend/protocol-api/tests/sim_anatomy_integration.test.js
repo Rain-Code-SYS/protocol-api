@@ -29,7 +29,8 @@ class V3 {
   copy(v) { this.x = v.x; this.y = v.y; this.z = v.z; return this; }
   normalize() { const m = Math.hypot(this.x, this.y, this.z) || 1; this.x /= m; this.y /= m; this.z /= m; return this; }
 }
-class Obj { constructor() { this.children = []; this.visible = true; this.position = new V3(); } add(o) { this.children.push(o); o.parent = this; } remove(o) { this.children = this.children.filter(c => c !== o); } }
+class Obj { constructor() { this.children = []; this.visible = true; this.position = new V3(); } add(o) { this.children.push(o); o.parent = this; } remove(o) { this.children = this.children.filter(c => c !== o); }
+  traverse(fn) { fn(this); this.children.forEach(c => (c.traverse ? c.traverse(fn) : fn(c))); } }
 const RY = -Math.PI / 2;                                   // patient.rotation.y
 const rot = (v, s) => new V3(v.x * Math.cos(RY) + s * v.z * Math.sin(RY), v.y, -s * v.x * Math.sin(RY) + v.z * Math.cos(RY));
 const quat = {rotate: v => rot(v, 1)};
@@ -51,12 +52,17 @@ function makeSandbox() {
   const patient = new THREE.Group(), scene = new THREE.Group();
   const old = n => { const g = new THREE.Group(); g.tag = n; patient.add(g); return g; };
   const mat = (color, opacity) => ({color, opacity});
-  const credit = {hidden: true, textContent: ''}, calls = [];
+  const credit = {hidden: true, textContent: ''}, calls = [], roomCalls = [];
   const sandbox = {
     THREE, ANAT: null, console, Math, Float32Array,
     SIM_SITE: Anatomy.SITE,
     $: id => (id === 'simCredit' ? credit : {}),
     simRender: () => calls.push('render'),
+    document: {createElement: () => ({getContext: () => ({})})},
+    ProcedureRoom: {
+      layout: o => { roomCalls.push(o); return {lamp: {}}; },
+      build: (T, L, o) => { const g = new T.Group(); g.name = 'room-' + roomCalls.length; g.built = o; return g; },
+    },
     simGL: {
       patient, scene, mat, skinMat: () => mat(0xf1c9a8, 0.3), lungMat: mat(0xe58a9a, 0.8), lungMm: 7, userPicked: false,
       skin: old('skin'), body: old('body'), ribs: old('ribs'), zone: old('zone'), lungs: old('lungs'),
@@ -68,10 +74,10 @@ function makeSandbox() {
   sandbox.tubeGeo = rings => ({rings});
   scene.updateMatrixWorld = () => {};
   vm.createContext(sandbox);
-  const code = ['simAttachAnatomy', 'simBuildLungs', 'simSetTarget', 'simHit']
+  const code = ['simAttachAnatomy', 'simBuildLungs', 'simSetTarget', 'simHit', 'simBuildRoom']
     .map(extractFunction).join('\n') + '\nfunction simSiteOk(p){ return ANAT.siteOk(p, SIM_SITE); }\nfunction skinNormal(p){ return ANAT.skinNormal(p); }';
   vm.runInContext(code, sandbox);
-  return {sandbox, credit, calls};
+  return {sandbox, credit, calls, roomCalls};
 }
 
 test('simAttachAnatomy สลับฉากเป็นโมเดลจริง: ผิว/กระดูก/อวัยวะ/โซน/เมชเลือกจุด/เตียง/เครดิต', () => {
@@ -123,4 +129,22 @@ test('simBuildLungs (โมเดลจริง): สร้างปอดซ�
   vm.runInContext('simBuildLungs', sandbox)(30);
   assert.equal(G.lungsDyn.children.length, 2);                     // ล้างของเดิมก่อนสร้างใหม่
   assert.equal(G.lungMm, 30);
+});
+
+test('ห้องทำหัตถการ: สร้างตามหลังผู้ป่วยจริงและโปรไฟล์ขา แทนเตียงเดิม และสร้างใหม่โดยถอดห้องเดิมออก', () => {
+  const {sandbox, roomCalls} = makeSandbox();
+  const G = sandbox.simGL;
+  vm.runInContext('simBuildRoom', sandbox)();                       // ก่อนโหลดโมเดลจริง: ผังตั้งต้น
+  assert.equal(roomCalls.length, 1);
+  assert.equal(roomCalls[0].backX, undefined);
+  assert.equal(G.bed.visible, false, 'เตียงเดิมต้องถูกซ่อน');
+  const first = G.room;
+  assert.ok(G.scene.children.includes(first));
+  vm.runInContext('simAttachAnatomy', sandbox)(A);                  // หลังโหลดโมเดลจริง: สร้างห้องใหม่
+  assert.equal(roomCalls.length, 2);
+  assert.equal(roomCalls[1].backX, A.landmarks.backX);
+  assert.equal(roomCalls[1].env, A.manifest.env);
+  assert.ok(G.room !== first && G.scene.children.includes(G.room));
+  assert.ok(!G.scene.children.includes(first), 'ห้องเดิมต้องถูกถอดออก');
+  assert.equal(typeof G.room.built.canvas, 'function');             // ตัวสร้างพื้นผิวภาพ (จอมอนิเตอร์/นาฬิกา/เงา)
 });
