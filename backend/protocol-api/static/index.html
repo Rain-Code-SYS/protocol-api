@@ -1218,17 +1218,38 @@ function simInitGL(){
   THREE.Object3D.DefaultUp.set(0, 0, 1);
   const renderer = new THREE.WebGLRenderer({canvas: simCv, antialias: true, alpha: true});
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;   // เงาจริงจากโคมผ่าตัดและไฟเพดาน (ตั้งใน procedure_room.js)
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(35, 1, 0.01, 5);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-  const sun = new THREE.DirectionalLight(0xffffff, 0.8); sun.position.set(-1, -1.5, 2); scene.add(sun);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.5); sun.position.set(-1, -1.5, 2); scene.add(sun);
   const patient = new THREE.Group(); patient.rotation.y = -Math.PI / 2; scene.add(patient);   // ตัวผู้ป่วย: หมุนจากท่านั่ง (หน้า +X) ให้นอนหงาย (หน้าอก +Z)
   const mat = (color, opacity, extra) => new THREE.MeshPhongMaterial(Object.assign({color, transparent: opacity < 1, opacity, side: THREE.DoubleSide, shininess: 30}, extra));
-  const skinMat = () => mat(0xf1c9a8, 0.3, {depthWrite: false});
+  // ผิวหนังทึบแสง มองไม่เห็นด้านใน ยกเว้นวงรอบจุดเจาะ (skinHole, รัศมี skinHoleR): ตรงกลางโปร่งใสให้เห็นอวัยวะ/เข็ม ขอบค่อยๆ ทึบด้วย dither
+  // แล้วมีผิวใสสีอ่อน (glass) คลุมเฉพาะวงนั้น ทั้งสองใช้ตำแหน่งโลกของจุดเจาะร่วมกัน (uniform เดียว อัปเดตทุกเฟรมใน simRender)
+  const skinHole = {value: new THREE.Vector3(0, 0, -50)}, skinHoleR = {value: 0.055};
+  const holeShader = (m, glass) => {
+    m.customProgramCacheKey = () => glass ? 'skin-glass' : 'skin-hole';
+    m.onBeforeCompile = sh => {
+      sh.uniforms.uHole = skinHole; sh.uniforms.uHoleR = skinHoleR;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      let f = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nuniform vec3 uHole;\nuniform float uHoleR;')
+        .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nfloat hT = smoothstep(uHoleR * 0.5, uHoleR, distance(vWPos, uHole));' +
+          (glass ? '' : '\nfloat hN = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));\nif (hT < hN) discard;'));
+      if (glass) f = f.replace('#include <alphatest_fragment>', '#include <alphatest_fragment>\ndiffuseColor.a *= (1.0 - hT);\nif (diffuseColor.a < 0.004) discard;');
+      sh.fragmentShader = f;
+    };
+    return m;
+  };
+  const skinMat = () => holeShader(mat(0xf1c9a8, 1, {shininess: 22, specular: 0x222222}), false);
+  const glassMat = () => holeShader(mat(0xfff0e2, 0.34, {side: THREE.FrontSide, depthWrite: false, shininess: 60, specular: 0x444444}), true);
+  const skinGlass = base => { const g = new THREE.Mesh(base.geometry, glassMat()); g.renderOrder = 2; base.add(g); return g; };
   const zsl = []; for (let i = 0; i <= 32; i++) zsl.push(-0.30 + 0.64 * i / 32);
   const skin = new THREE.Mesh(tubeGeo(zsl.map(z => Array.from({length: 40}, (_, k) => ringPt(z, 2 * Math.PI * k / 40, 0)))), skinMat());
+  skin.castShadow = skin.receiveShadow = true; skinGlass(skin);
   patient.add(skin);
   const body = new THREE.Group();   // ศีรษะ คอ ไหล่ แขน มือ
-  const part = (geo, x, y, z, flat, sc) => { const m = new THREE.Mesh(geo, skinMat()); m.position.set(x, y, z); if (flat) m.rotation.x = Math.PI / 2; if (sc) m.scale.set(...sc); body.add(m); };
+  const part = (geo, x, y, z, flat, sc) => { const m = new THREE.Mesh(geo, skinMat()); m.castShadow = m.receiveShadow = true; m.position.set(x, y, z); if (flat) m.rotation.x = Math.PI / 2; if (sc) m.scale.set(...sc); body.add(m); };
   // สัดส่วนผู้ใหญ่ชาย ~175 ซม. (1 หน่วย = 1 ม., รอยบุ๋มเหนือกระดูกอก z=0.232): ศีรษะสูง ~22 ซม. คางสูงกว่ารอยบุ๋ม ~11 ซม. แขนยาวถึงกลางต้นขา ขายาว ~82 ซม. จากสะโพก
   const bedBack = -0.12;   // bedBack = ผิวเตียงในพิกัดผู้ป่วย: แขนขาวางแนบเตียง
   part(new THREE.SphereGeometry(0.0975, 28, 20), 0, 0, 0.455, false, [1, 0.8, 1.15]);   // ศีรษะ: ลึก 19.5 กว้าง 15.5 สูง 22.5 ซม.
@@ -1290,13 +1311,13 @@ function simInitGL(){
   target.add(new THREE.Mesh(new THREE.TorusGeometry(0.014, 0.0016, 8, 28), new THREE.MeshBasicMaterial({color: 0xf0b44c})));
   const guide = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 0.16)]), new THREE.LineDashedMaterial({color: 0x34d27b, dashSize: 0.01, gapSize: 0.008}));
   guide.computeLineDistances(); target.add(guide); scene.add(target);
-  const needle = new THREE.Group(), nm = new THREE.MeshPhongMaterial({color: 0xffffff});
+  const needle = new THREE.Group(), nm = new THREE.MeshPhongMaterial({color: 0xffffff});   // เข็มทิ้งเงาลงผิว
   const cyl = (r, len, yc, m) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 12), m); c.position.y = yc; needle.add(c); };
   cyl(0.0016, 0.09, -0.045, nm); cyl(0.009, 0.07, -0.125, new THREE.MeshPhongMaterial({color: 0xcfe3ff, transparent: true, opacity: 0.8})); cyl(0.0035, 0.05, -0.185, nm);
   scene.add(needle);   // ปลายเข็มอยู่ที่ origin ของกลุ่ม ชี้ +Y
   const mline = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({color: 0xffd166}));
   mline.frustumCulled = false; scene.add(mline);
-  simGL = {renderer, scene, camera, patient, skin, zone, body, ribs, lungs, target, guide, needle, nm, mline, lungMat: mat(0xe58a9a, 0.8), lungMm: 0, w: 0, h: 0, ray: new THREE.Raycaster(), mat, skinMat, userPicked: false};
+  simGL = {renderer, scene, camera, patient, skin, zone, body, ribs, lungs, target, guide, needle, nm, mline, lungMat: mat(0xe58a9a, 0.8), lungMm: 0, w: 0, h: 0, ray: new THREE.Raycaster(), mat, skinMat, glassMat, skinHole, userPicked: false};
   const bed = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.6, 0.02), mat(0x2b4a66, 1)); bed.position.set(0.35, 0, -0.13); scene.add(bed); simGL.bed = bed;   // เตียง
   scene.updateMatrixWorld(true);
   simSetTarget([-0.11, -0.10, 1], [0, 0, -1]);   // จุดเจาะตั้งต้น: หน้าอกด้านขวาของผู้ป่วย ในโซนเจาะ (ช่องซี่โครงที่ 5) ถ้ายังไม่ได้เลือกด้วย Pointer
@@ -1312,10 +1333,20 @@ function simBuildRoom(){   // ห้องทำหัตถการรอบ�
     G.scene.remove(G.room);
     G.room.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
   }
-  const L = ProcedureRoom.layout({backX: ANAT ? ANAT.landmarks.backX : undefined, env: ANAT ? ANAT.manifest.env : undefined});
+  // ผ้าคลุมทิ้งตัวพาดผิวจริงของผู้ป่วย (ขา แขน เท้า): ใช้สนามความสูงของผิวทั้งตัว คำนวณครั้งเดียวต่อโมเดล
+  const field = ANAT && ANAT.skinTopField ? (ANAT._clothField || (ANAT._clothField = ANAT.skinTopField(-1.35, -0.06, 0.31, 0.01))) : undefined;
+  const L = ProcedureRoom.layout({backX: ANAT ? ANAT.landmarks.backX : undefined, env: ANAT ? ANAT.manifest.env : undefined, skinField: field});
   G.room = ProcedureRoom.build(THREE, L, {canvas: () => document.createElement('canvas')});
   G.scene.add(G.room);
   if (G.bed) G.bed.visible = false;   // เตียงเดิมถูกแทนด้วยเตียงหัตถการในห้อง
+  if (G.renderer && typeof THREE.PMREMGenerator === 'function') {   // แสงสะท้อนจากห้อง (ไฟเพดาน ผนัง) ให้เหล็กและพื้นดูเป็นวัสดุจริง
+    try {
+      const pm = new THREE.PMREMGenerator(G.renderer), rt = pm.fromScene(G.room, 0.04);
+      pm.dispose();
+      if (G.envRT) G.envRT.dispose();
+      G.envRT = rt; G.scene.environment = rt.texture;
+    } catch (e) { console.warn('[Sim] สร้าง environment map ไม่ได้ (ข้าม):', e); }
+  }
 }
 function simAttachAnatomy(A){   // สลับลำตัว/กระดูก/อวัยวะ/โซนเจาะ/ปอดเป็นโมเดลจริง (BodyParts3D) ที่โหลดมาแล้ว
   const G = simGL;
@@ -1328,6 +1359,8 @@ function simAttachAnatomy(A){   // สลับลำตัว/กระดู�
     default: mat(0xcccccc, 1)});
   [G.skin, G.body, G.ribs, G.zone, G.lungs].forEach(o => P.remove(o));
   G.skin = built.skin; G.body = new THREE.Group(); G.ribs = built.bones;
+  G.skin.castShadow = G.skin.receiveShadow = true;
+  if (G.glassMat) { const gl = new THREE.Mesh(G.skin.geometry, G.glassMat()); gl.renderOrder = 2; G.skin.add(gl); }   // ผิวใสสีอ่อนเฉพาะวงรอบเข็ม
   G.lungs = new THREE.Group(); G.lungsDyn = new THREE.Group(); G.lungs.add(built.organs); G.lungs.add(G.lungsDyn);
   G.pick = A.buildPick(THREE);
   const zone = new THREE.Group();
@@ -1690,6 +1723,7 @@ function simRender(){
   G.skin.visible = G.body.visible = simLayers.skin; G.ribs.visible = simLayers.ribs; G.lungs.visible = simLayers.lungs; G.zone.visible = simZone;
   const V = a => new THREE.Vector3(a[0], a[1], a[2]), T = simTarget, aligned = d && d.tilt <= SIM.tol;
   G.target.position.copy(V(T.S)); G.target.quaternion.setFromUnitVectors(V([0, 0, 1]), V(T.N));   // วง + เส้นประแนวตั้งฉากที่จุดเจาะ
+  if (G.skinHole) G.skinHole.value.set(T.S[0], T.S[1], T.S[2]);   // ช่องมองด้านในตัวอยู่รอบจุดเจาะ
   const reveal = !simBlind() || simRun.done;   // Blind: ไม่บอกผลด้วยสีระหว่างทำ
   const col = reveal && simRun.phase === 'failed' ? 0xff5252 : aligned && !simBlind() ? 0x34d27b : 0xf0b44c;
   G.target.children[0].material.color.setHex(col);

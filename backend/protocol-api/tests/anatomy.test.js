@@ -149,3 +149,14 @@ test('build/buildPick สร้างเมชครบตามข้อมู�
   assert.equal(pick.visible, false);
   assert.ok(pick.geometry.index.length > 10000 || pick.geometry.index.length === undefined || true);
 });
+test('skinTopField: สนามความสูงผิวทั้งตัว (ใช้ให้ผ้าคลุมทิ้งตัวพาดผิวจริง) ครอบคลุมขา/เท้า และอยู่ในกรอบผิว', () => {
+  const f = A.skinTopField(-1.35, -0.06, 0.31, 0.01), skin = manifest.meshes.find(m => m.group === 'skin');
+  assert.equal(f.top.length, f.nz * f.ny);
+  assert.equal(f.nz, Math.round((-0.06 + 1.35) / 0.01) + 1);
+  let filled = 0;
+  for (const v of f.top) if (!Number.isNaN(v)) { filled++; assert.ok(v >= skin.min[0] - 1e-5 && v <= skin.max[0] + 1e-5); }
+  assert.ok(filled > 2500, 'ช่องที่มีผิว ' + filled);
+  const j0 = Math.round(0.09 / 0.01 + 31), i0 = Math.round((-1.0 + 1.35) / 0.01);   // กลางหน้าแข้งซ้าย (y ≈ +0.09) ต้องมีผิวสูงกว่าเบาะ
+  assert.ok(f.top[i0 * f.ny + j0] > A.landmarks.backX + 0.03, 'หน้าแข้งต้องสูงกว่าผิวเบาะ');
+  for (const v of f.top.slice(0, f.ny)) assert.ok(Number.isNaN(v) || v < skin.max[0] + 1e-5);   // แถว z ต่ำสุด (ใต้ปลายเท้า) ไม่เกินกรอบ
+});

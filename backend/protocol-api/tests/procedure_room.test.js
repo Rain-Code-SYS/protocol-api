@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const ProcedureRoom = require(path.join(__dirname, '..', 'static', 'procedure_room.js'));
+const Anatomy = require(path.join(__dirname, '..', 'static', 'anatomy.js'));
 
 const man = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'static', 'anatomy', 'anatomy.json'), 'utf8'));
 const L = ProcedureRoom.layout({backX: man.landmarks.backX, env: man.env});
@@ -100,7 +101,7 @@ test('build: สร้างเมชครบทุกชิ้นด้วย 
   const g = ProcedureRoom.build(THREE, L, {});
   const meshes = g.children.filter(c => c.geometry);
   assert.equal(meshes.length, L.items.length);
-  assert.equal(g.children.filter(c => c.target).length, 1);          // โคมไฟมีเป้าหมาย
+  assert.equal(g.children.filter(c => c.target).length, 3);          // โคมผ่าตัด + ไฟเพดาน 2 ดวง (มีเป้าหมายและเงา)
   assert.ok(count.box >= 60 && count.cyl >= 26 && count.sph >= 2 && count.plane >= 7);   // box รวมเปลือกห้อง 60, plane = เงา 5 + จอ + นาฬิกา
   const shell = meshes.find(m => m.name === 'room-shell');
   assert.equal(shell.material.side, THREE.BackSide);                // เห็นเฉพาะด้านในห้อง (มองจากนอกห้องทะลุได้)
@@ -111,4 +112,107 @@ test('build: สร้างเมชครบทุกชิ้นด้วย 
   assert.deepEqual(clock.rot, [Math.PI / 2, 0, -Math.PI / 2]);
   assert.equal(meshes.find(m => m.name === 'table-column').rotation.x, Math.PI / 2);          // กระบอกแนวตั้ง (แกน Z ของฉาก)
   assert.equal(meshes.find(m => m.name === 'table-rail-r').rotation.z, Math.PI / 2);          // รางข้างเตียงแนวนอนตามแกน X
+});
+
+// ---------- ผ้าคลุมทิ้งตัวพาดผิวจริง ----------
+const dirA = path.join(__dirname, '..', 'static', 'anatomy');
+const A = new Anatomy(man, fs.readFileSync(path.join(dirA, 'anatomy.bin')));
+const FIELD = A.skinTopField(-1.35, -0.06, 0.31, 0.01);
+const LC = ProcedureRoom.layout({backX: man.landmarks.backX, env: man.env, skinField: FIELD});
+const DR = LC.items.find(i => i.kind === 'drape');
+const SF = ProcedureRoom.drapeSurface(DR);
+const X0 = SF.pos[SF.endRows * SF.nv * 3], X1 = SF.pos[(SF.endRows + 1) * SF.nv * 3];   // X ของผ้า = -z ผู้ป่วย: แถวแรกของแผ่นบนเตียงคือปลายเท้า
+const K = 8, NV = SF.nv, NY = NV - 2 * K, E0 = SF.endRows, NX = SF.nu - E0;   // E0 = แถวชายผ้าห้อยปลายเตียง (ก่อนแถวผ้าบนเตียง)
+
+test('ผ้า (มีผิวจริง): ยังมีข้อมูลโปรไฟล์เดิมครบ และมีสนามความสูงที่ใช้สร้างเมช', () => {
+  assert.ok(DR.cloth && DR.cloth.h.length === FIELD.nz * FIELD.ny);
+  assert.equal(DR.xs.length, man.env.n);
+  assert.equal(DR.bottom, man.landmarks.backX);
+  assert.ok(SF.pos.every(Number.isFinite) && SF.uv.every(Number.isFinite));
+  assert.equal(SF.pos.length / 3, SF.nu * SF.nv);
+  assert.ok(Math.max(...SF.idx) < SF.pos.length / 3);
+});
+
+test('ผ้าอยู่เหนือผิวทุกจุดของร่างกายจริง (ขา แขน เท้า สะโพก): ไม่มีส่วนของหุ่นโผล่นอกผ้า', () => {
+  const m = man.meshes.find(q => q.group === 'skin'), d = A.meshData(m), P = d.positions, I = d.indices;
+  const yE = SF.pos[(E0 * NV + K + NY - 1) * 3 + 1];
+  const clothZ = (z, y) => {                                                 // bilinear บนแถวบนของกริดผ้า
+    const fi = (-z - X0) / (X1 - X0), j = (y + yE) / (2 * yE) * (NY - 1);
+    const i0 = Math.min(NX - 2, Math.max(0, Math.floor(fi))), fu = fi - i0, j0 = Math.min(NY - 2, Math.max(0, Math.floor(j))), fv = j - j0;
+    const at = (i, jj) => SF.pos[((E0 + i) * NV + K + jj) * 3 + 2];
+    return at(i0, j0) * (1 - fu) * (1 - fv) + at(i0 + 1, j0) * fu * (1 - fv) + at(i0, j0 + 1) * (1 - fu) * fv + at(i0 + 1, j0 + 1) * fu * fv;
+  };
+  let n = 0, worst = Infinity;
+  for (let t = 0; t < I.length; t += 3) {
+    const a = I[t] * 3, b = I[t + 1] * 3, c = I[t + 2] * 3;
+    for (const [u, v, w] of [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1 / 3, 1 / 3, 1 / 3], [0.5, 0.5, 0], [0, 0.5, 0.5], [0.5, 0, 0.5]]) {
+      const x = P[a] * u + P[b] * v + P[c] * w, y = P[a + 1] * u + P[b + 1] * v + P[c + 1] * w, z = P[a + 2] * u + P[b + 2] * v + P[c + 2] * w;
+      if (z < -1.30 || z > -0.075 || Math.abs(y) > 0.30) continue;          // เฉพาะช่วงที่ผ้าคลุม (ไม่รวมตัวส่วนบนและด้านนอกขอบเตียง)
+      n++; worst = Math.min(worst, clothZ(z, y) - x);
+    }
+  }
+  assert.ok(n > 20000, 'ตัวอย่างผิวที่ตรวจ ' + n);
+  assert.ok(worst > 0.002, 'ผ้าต่ำกว่าผิวที่สุด ' + (worst * 1000).toFixed(1) + ' mm');
+});
+
+test('ผ้ามีรอยย่น (ผิวไม่เรียบ) แต่ไม่ลึกเกินจริง และราบกับเบาะที่ส่วนปลาย', () => {
+  let rough = 0, cnt = 0, maxZ = -Infinity;
+  for (let i = 2; i < NX - 2; i++) for (let j = 2; j < NY - 2; j++) {
+    const z = (di, dj) => SF.pos[((E0 + i + di) * NV + K + j + dj) * 3 + 2];
+    rough += Math.abs(z(1, 0) + z(-1, 0) + z(0, 1) + z(0, -1) - 4 * z(0, 0)); cnt++;   // ค่าโค้งเฉพาะที่ (laplacian)
+    maxZ = Math.max(maxZ, z(0, 0));
+  }
+  assert.ok(rough / cnt > 0.0004, 'ผ้าเรียบเกินไป: ' + rough / cnt);
+  assert.ok(rough / cnt < 0.01, 'ผ้าย่นเกินจริง: ' + rough / cnt);
+  assert.ok(maxZ - man.landmarks.backX < 0.33 && maxZ - man.landmarks.backX > 0.1);
+  const footZ = SF.pos[(K + (NY >> 1)) * 3 + 2], footX = SF.pos[(K + (NY >> 1)) * 3];   // แถวนอกสุดของชายผ้าปลายเตียง: ห้อยต่ำกว่าเบาะและยื่นพ้นปลายเบาะ
+  assert.ok(footZ < man.landmarks.backX - 0.1, 'ปลายผ้ายังสูง ' + (footZ - man.landmarks.backX));
+  assert.ok(footX > X0 + 0.02, 'ชายผ้าปลายเตียงต้องยื่นพ้นขอบ');
+  for (let r = 0; r < E0; r++) for (let v = 0; v < NV; v++) assert.ok(Number.isFinite(SF.pos[(r * NV + v) * 3 + 2]));
+});
+
+test('ชายผ้าห้อยลงข้างเตียงทั้งสองด้าน ต่ำกว่าผิวเบาะและพ้นขอบเบาะ', () => {
+  for (const [v, sd] of [[0, -1], [NV - 1, 1]]) {
+    for (let i = 0; i < SF.nu; i += 7) {
+      const q = (i * NV + v) * 3, y = SF.pos[q + 1], z = SF.pos[q + 2];
+      assert.ok(sd * y > ProcedureRoom.DEFAULTS.tableHalfWidth, 'ชายผ้าต้องพ้นขอบเบาะ');
+      assert.ok(z < man.landmarks.backX - 0.1, 'ชายผ้าต้องห้อยลงต่ำกว่าเบาะ >10 cm');
+    }
+  }
+});
+
+test('ไม่มี skinField ก็ใช้ผ้ารูปแบบเดิม (ไม่มี cloth) และหน้าตัดไม่ตัดมุมขา', () => {
+  const L0 = ProcedureRoom.layout({backX: man.landmarks.backX, env: man.env});
+  assert.ok(!L0.items.find(i => i.kind === 'drape').cloth);
+});
+
+test('build (มี Standard material): ผ้ามี uv + bump, โคมส่องเงา, ชิ้นโครงสร้างไม่ทิ้งเงา, ชิ้นเฟอร์นิเจอร์ทิ้งและรับเงา', () => {
+  class Obj { constructor() { this.children = []; this.position = {set: (x, y, z) => { this.pos = [x, y, z]; }}; this.rotation = {x: 0, y: 0, z: 0, set() {}}; this.scale = {set() {}}; } add(o) { this.children.push(o); } }
+  const geo = () => class { constructor() { this.attrs = {}; } setAttribute(n, a) { this.attrs[n] = a; } setIndex() {} computeVertexNormals() {} };
+  const light = class extends Obj { constructor() { super(); this.target = new Obj(); this.shadow = {mapSize: {set: (a, b) => { this.shadowSize = [a, b]; }}, camera: {}}; } };
+  const mk = n => class { constructor(p) { Object.assign(this, p); this.kind = n; } };
+  const THREE = {
+    Group: class extends Obj {}, Mesh: class extends Obj { constructor(g, m) { super(); this.geometry = g; this.material = m; } },
+    BoxGeometry: geo(), CylinderGeometry: geo(), SphereGeometry: geo(), PlaneGeometry: geo(), BufferGeometry: geo(),
+    Float32BufferAttribute: class { constructor(a, s) { this.array = a; this.itemSize = s; } },
+    CanvasTexture: class { constructor() { this.repeat = {set: (a, b) => { this.rep = [a, b]; }}; } },
+    MeshPhongMaterial: mk('phong'), MeshBasicMaterial: mk('basic'), MeshStandardMaterial: mk('std'),
+    SpotLight: light, HemisphereLight: class extends Obj {}, BackSide: 1, DoubleSide: 2, RepeatWrapping: 1000,
+  };
+  const cv = () => ({width: 0, height: 0, getContext: () => new Proxy({}, {get: (t, k) => (k === 'createRadialGradient' ? () => ({addColorStop() {}}) : () => {}), set: () => true})});
+  const g = ProcedureRoom.build(THREE, LC, {canvas: cv});
+  const by = n => g.children.find(c => c.name === n);
+  const drape = by('drape');
+  assert.equal(drape.material.kind, 'std');
+  assert.ok(drape.material.bumpMap && drape.geometry.attrs.uv.itemSize === 2);
+  assert.equal(drape.castShadow, true);
+  assert.equal(by('floor').castShadow, false);
+  assert.equal(by('floor').receiveShadow, true);
+  assert.ok(by('floor').material.map && by('floor').material.map.rep[0] >= 9);
+  for (const n of ['room-shell', 'ceiling', 'wainscot-y1']) assert.equal(by(n).castShadow, false, n);
+  for (const n of ['table-pad', 'mayo-tray', 'iv-pole', 'stool-seat', 'lamp-head']) assert.equal(by(n).castShadow, true, n);
+  const lights = g.children.filter(c => c.target);
+  assert.equal(lights.length, 3);
+  assert.ok(lights.every(l => l.castShadow === true));
+  assert.deepEqual(lights[0].shadowSize, [2048, 2048]);
 });

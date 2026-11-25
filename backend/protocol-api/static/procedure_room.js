@@ -43,7 +43,7 @@
 
     // ---------- เปลือกห้อง ----------
     items.push({name: 'room-shell', kind: 'shell', pos: [(wx0 + wx1) / 2, (wy0 + wy1) / 2, (floorZ + ceilZ) / 2], size: [wx1 - wx0, wy1 - wy0, ceilZ - floorZ], color: C.wall});
-    items.push({name: 'floor', kind: 'box', pos: [(wx0 + wx1) / 2, (wy0 + wy1) / 2, floorZ - 0.005], size: [wx1 - wx0, wy1 - wy0, 0.01], color: C.floor, shininess: 40, specular: 0x333333});
+    items.push({name: 'floor', kind: 'box', pos: [(wx0 + wx1) / 2, (wy0 + wy1) / 2, floorZ - 0.005], size: [wx1 - wx0, wy1 - wy0, 0.01], color: 0xffffff, shininess: 55, specular: 0x333333, texture: 'floor', rough: 0.38});
     items.push({name: 'ceiling', kind: 'box', pos: [(wx0 + wx1) / 2, (wy0 + wy1) / 2, ceilZ + 0.005], size: [wx1 - wx0, wy1 - wy0, 0.01], color: C.ceiling});
     // แผงผนังล่าง (wainscot) และบัวพื้น
     const wh = 1.05, t = 0.012;
@@ -56,7 +56,8 @@
     box('baseboard-x0', [wx0 + 0.02, (wy0 + wy1) / 2, floorZ + 0.05], [0.02, wy1 - wy0, 0.1], C.base);
     box('baseboard-x1', [wx1 - 0.02, (wy0 + wy1) / 2, floorZ + 0.05], [0.02, wy1 - wy0, 0.1], C.base);
     // ไฟเพดาน (เปล่งแสง)
-    for (const [i, x] of [-1.3, 1.9].entries()) box('ceiling-light-' + (i + 1), [x, 0, ceilZ - 0.012], [1.2, 0.6, 0.024], 0xffffff, {emissive: 0xffffff, basic: true});
+    const ceilingXs = [-1.3, 1.9];
+    for (const [i, x] of ceilingXs.entries()) box('ceiling-light-' + (i + 1), [x, 0, ceilZ - 0.012], [1.2, 0.6, 0.024], 0xffffff, {emissive: 0xffffff, basic: true});
 
     // ---------- เตียงหัตถการ ----------
     box('table-pad', [tx, 0, padTop - D.padThickness / 2], [tl, tw, D.padThickness], C.pad, {shininess: 25});
@@ -80,7 +81,10 @@
         hw.push(env.halfWidthMm[i] / 1000 + 0.025);
         ant.push(env.anteriorXMm[i] / 1000 + 0.02);
       }
-      items.push({name: 'drape', kind: 'drape', xs: zs, halfWidth: hw, top: ant, bottom: padTop, color: C.drape});
+      const drape = {name: 'drape', kind: 'drape', xs: zs, halfWidth: hw, top: ant, bottom: padTop, color: C.drape, texture: 'weave'};
+      // มีสนามความสูงผิวจริง (Anatomy.skinTopField): ผ้าทิ้งตัวพาดผิวจริงทุกส่วน ไม่มีขา/แขน/เท้าโผล่ และมีรอยย่น
+      if (o.skinField) drape.cloth = clothField(o.skinField, backX);
+      items.push(drape);
     }
 
     // ---------- โคมผ่าตัดเหนือเตียง ----------
@@ -167,7 +171,122 @@
     }
     shadow('shadow-stool', [sx, sy], 0.6, 0.6, 0.3);
 
-    return {floorZ, ceilZ, room, padTop, padBottom, table: {x: tx, length: tl, width: tw}, items, lamp};
+    return {floorZ, ceilZ, room, padTop, padBottom, table: {x: tx, length: tl, width: tw}, items, lamp, lights: {ceilZ, ceilingXs}};
+  }
+
+
+  // ---------- ผ้าคลุม: ทิ้งตัวพาดผิวจริง + รอยย่น (ข้อมูลล้วน ทดสอบใน Node ได้) ----------
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  const smooth = t => t * t * (3 - 2 * t);
+  const hash2 = (i, j) => { let h = (Math.imul(i, 374761393) + Math.imul(j, 668265263)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
+  const noise2 = (x, y) => {                                 // value noise 0..1 ต่อเนื่อง
+    const i = Math.floor(x), j = Math.floor(y), fx = smooth(x - i), fy = smooth(y - j);
+    const a = hash2(i, j), b = hash2(i + 1, j), c = hash2(i, j + 1), d = hash2(i + 1, j + 1);
+    return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+  };
+  const ridge = (n, k) => Math.pow(1 - Math.abs(2 * n - 1), k);   // สันพับคม 0..1
+
+  /**
+   * skin = Anatomy.skinTopField(...) (x สูงสุดของผิวในแต่ละช่อง z,y), bedX = ผิวเบาะ
+   * ผ้าไม่ยืด: ผิวผ้า = ขอบบนของ "เต็นท์" ที่กางจากจุดสูงทุกจุดของร่างกาย (ลาด ~40°) แล้วเกลี่ยให้เรียบ และการันตีสูงกว่าผิวเสมอ
+   * คืน {z0, y0, cell, nz, ny, h: Float32Array} (h = ความสูงผ้าเหนือเบาะ เมตร)
+   */
+  function clothField(skin, bedX) {
+    const {nz, ny, cell, top} = skin, n = nz * ny;
+    const H = new Float32Array(n);
+    for (let k = 0; k < n; k++) H[k] = Number.isFinite(top[k]) ? Math.max(0, top[k] - bedX) : 0;
+    const R = Math.ceil(0.16 / cell), r0 = 0.018, slope = 0.85;
+    let T = new Float32Array(n);
+    for (let i = 0; i < nz; i++) for (let j = 0; j < ny; j++) {
+      let best = 0;
+      for (let di = -R; di <= R; di++) {
+        const ii = i + di; if (ii < 0 || ii >= nz) continue;
+        for (let dj = -R; dj <= R; dj++) {
+          const jj = j + dj; if (jj < 0 || jj >= ny) continue;
+          const v = H[ii * ny + jj]; if (v <= best) continue;
+          const d = Math.hypot(di, dj) * cell, val = v - Math.max(0, d - r0) * slope;
+          if (val > best) best = val;
+        }
+      }
+      T[i * ny + j] = best;
+    }
+    const blur = (src, r) => {                                   // box blur แยกแกน
+      const tmp = new Float32Array(n), out = new Float32Array(n);
+      for (let i = 0; i < nz; i++) for (let j = 0; j < ny; j++) { let s = 0, c = 0; for (let q = -r; q <= r; q++) { const jj = j + q; if (jj >= 0 && jj < ny) { s += src[i * ny + jj]; c++; } } tmp[i * ny + j] = s / c; }
+      for (let i = 0; i < nz; i++) for (let j = 0; j < ny; j++) { let s = 0, c = 0; for (let q = -r; q <= r; q++) { const ii = i + q; if (ii >= 0 && ii < nz) { s += tmp[ii * ny + j]; c++; } } out[i * ny + j] = s / c; }
+      return out;
+    };
+    T = blur(blur(T, 2), 2);
+    for (let k = 0; k < n; k++) T[k] = Math.max(T[k], H[k] + 0.006, 0.004);   // ผ้าอยู่เหนือผิวอย่างน้อย 6 mm
+    T = blur(T, 1);
+    for (let k = 0; k < n; k++) T[k] = Math.max(T[k], H[k] + 0.0045, 0.003);
+    return {z0: skin.z0, y0: skin.y0, cell, nz, ny, h: T};
+  }
+
+  /**
+   * เมชผ้า: แผ่นบนเตียง (กริด x,y ละเอียด 8 mm) + ชายผ้าห้อยลงข้างเตียงทั้งสองด้านเป็นกริดเดียวกัน (ผิวต่อเนื่อง ไม่มีรอยแยก)
+   * รอยย่นเป็นการยกขึ้นอย่างเดียว (ไม่ลดต่ำกว่าผิวที่คำนวณไว้) สันพับตามทิศลาดของผ้า: ยิ่งชันยิ่งย่น ผ้าราบแทบเรียบ
+   * คืน {pos, uv, idx, nu, nv} (พิกัดโลก: X = -z ผู้ป่วย เรียงจากเท้าไปเอว, Y = y ผู้ป่วย, Z = ขึ้น)
+   */
+  function drapeSurface(it) {
+    const F = it.cloth, bed = it.bottom, step = 0.008, K = 8, KE = 9;   // KE = แถวชายผ้าห้อยที่ปลายเตียงด้านเท้า
+    const zMin = F.z0, zMax = F.z0 + (F.nz - 1) * F.cell, yE = -F.y0;
+    const nx = Math.floor((zMax - zMin) / step) + 1, ny = Math.round(2 * yE / step) + 1, nv = ny + 2 * K;
+    const sample = (z, y) => {                                  // bilinear บนสนามหลัก
+      const fi = clamp01((z - zMin) / (zMax - zMin)) * (F.nz - 1), fj = clamp01((y + yE) / (2 * yE)) * (F.ny - 1);
+      const i = Math.min(F.nz - 2, Math.floor(fi)), j = Math.min(F.ny - 2, Math.floor(fj)), u = fi - i, v = fj - j, h = F.h;
+      return h[i * F.ny + j] * (1 - u) * (1 - v) + h[(i + 1) * F.ny + j] * u * (1 - v) + h[i * F.ny + j + 1] * (1 - u) * v + h[(i + 1) * F.ny + j + 1] * u * v;
+    };
+    const base = new Float32Array(nx * ny);
+    for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) base[i * ny + j] = sample(zMin + i * step, -yE + j * step);
+    const topZ = new Float32Array(nx * ny);
+    for (let i = 0; i < nx; i++) for (let j = 0; j < ny; j++) {
+      const k = i * ny + j, X = -(zMin + i * step), y = -yE + j * step;
+      const gx = (base[Math.min(nx - 1, i + 1) * ny + j] - base[Math.max(0, i - 1) * ny + j]) / (2 * step);
+      const gy = (base[i * ny + Math.min(ny - 1, j + 1)] - base[i * ny + Math.max(0, j - 1)]) / (2 * step);
+      const sx = clamp01(Math.abs(gx) * 1.5), sy = clamp01(Math.abs(gy) * 1.5);
+      const wx = noise2(X * 2.6, y * 4) * 0.8, warp = noise2(X * 7, y * 7) * 0.9;
+      const longFold = ridge(noise2(X * 3.4 + warp, y * 21 + wx), 1.7) * 0.0095 * (0.3 + 1.2 * sy);     // สันพับตามแนวยาวข้างขา
+      const crossFold = ridge(noise2(X * 24 + warp, y * 3.3), 1.7) * 0.0085 * (0.22 + 1.2 * sx);          // สันพับขวางที่เข่า/เท้า
+      const pillow = noise2(X * 5.2, y * 5.2) * 0.005;                                                    // ผ้าพองนุ่มช่วงกว้าง
+      const micro = noise2(X * 52, y * 52) * 0.0011;                                                       // ย่นละเอียด
+      topZ[k] = bed + base[k] + longFold + crossFold + pillow + micro;
+    }
+    const rows = nx + KE, pos = new Float32Array(rows * nv * 3), uv = new Float32Array(rows * nv * 2), idx = [];
+    for (let i = 0; i < nx; i++) {
+      const X = -(zMin + i * step), put = (v, x, y, z) => {
+        const q = (KE + i) * nv + v; pos[q * 3] = x; pos[q * 3 + 1] = y; pos[q * 3 + 2] = z; uv[q * 2] = X * 6; uv[q * 2 + 1] = y * 6;
+      };
+      for (let j = 0; j < ny; j++) put(K + j, X, -yE + j * step, topZ[i * ny + j]);
+      const zb = bed - 0.17 - 0.03 * noise2(X * 6, 3.3), pleatPh = 2.2 * noise2(X * 4, 8.1);
+      for (let side = 0; side < 2; side++) {                    // ชายผ้าห้อย: side 0 = -Y, side 1 = +Y
+        const sg = side ? 1 : -1, ze = topZ[i * ny + (side ? ny - 1 : 0)];
+        for (let k = 1; k <= K; k++) {
+          const t = k / K, pleat = Math.sin(X * 2 * Math.PI / 0.085 + pleatPh + 1.5 * noise2(X * 9, t * 2)) * (0.0035 + 0.0075 * t);
+          const out = 0.034 * smooth(clamp01(t / 0.35)) + pleat * (0.4 + t);
+          put(side ? ny + K + k - 1 : K - k, X, sg * (yE + out), ze - (ze - zb) * (1 - Math.cos(t * Math.PI / 2)) * 0.6 - (ze - zb) * 0.4 * t);
+        }
+      }
+    }
+    {                                                            // ปลายเตียงด้านเท้า: ผ้าห้อยลงปิดช่อง (ทั้งแถวหน้าตัดเลื่อนลงต่ำและยื่นออกไปทาง +X)
+      const base0 = KE * nv, zb = bed - 0.17;
+      for (let r = 0; r < KE; r++) {
+        const t = (KE - r) / KE, f = (1 - Math.cos(t * Math.PI / 2)) * 0.6 + 0.4 * t;
+        for (let v = 0; v < nv; v++) {
+          const q = base0 + v, x0 = pos[q * 3], y = pos[q * 3 + 1], z0 = pos[q * 3 + 2], o = (r * nv + v) * 3;
+          const pleat = Math.sin(y * 2 * Math.PI / 0.09 + 1.7 + 1.5 * noise2(y * 9, t * 2)) * (0.0035 + 0.0075 * t) * (0.4 + t);
+          pos[o] = x0 + 0.034 * smooth(clamp01(t / 0.35)) + pleat * (0.4 + t);
+          pos[o + 1] = y;
+          pos[o + 2] = z0 > zb ? z0 + (zb - z0) * f : z0;
+          uv[(r * nv + v) * 2] = pos[o] * 6; uv[(r * nv + v) * 2 + 1] = y * 6;
+        }
+      }
+    }
+    for (let i = 0; i < rows - 1; i++) for (let v = 0; v < nv - 1; v++) {
+      const a = i * nv + v, b = a + nv;
+      idx.push(a, b, a + 1, b, b + 1, a + 1);
+    }
+    return {pos, uv, idx, nu: rows, nv, endRows: KE};
   }
 
   // ---------- THREE builder ----------
@@ -175,6 +294,14 @@
     const p = {color: it.color === undefined ? 0xcccccc : it.color};
     if (it.opacity !== undefined && it.opacity < 1) { p.transparent = true; p.opacity = it.opacity; p.depthWrite = false; }
     if (it.basic) { p.color = it.emissive === undefined ? p.color : it.emissive; return new THREE.MeshBasicMaterial(p); }
+    if (THREE.MeshStandardMaterial) {                  // PBR: เหล็ก/พื้นสะท้อนแสงห้องผ่าน environment map (ถ้าฉากมี) ผนัง/ผ้าด้านเนียน
+      const shin = it.shininess === undefined ? 12 : it.shininess, steel = it.color === C.steel || it.color === C.darkSteel;
+      p.roughness = it.rough !== undefined ? it.rough : Math.max(0.2, Math.min(0.9, 0.92 - shin / 120));
+      p.metalness = it.metal !== undefined ? it.metal : (steel ? 0.75 : 0);
+      p.envMapIntensity = steel ? 1.0 : 0.35;
+      if (it.emissive !== undefined) p.emissive = it.emissive;
+      return new THREE.MeshStandardMaterial(p);
+    }
     p.shininess = it.shininess === undefined ? 12 : it.shininess;
     if (it.specular !== undefined) p.specular = it.specular;
     if (it.emissive !== undefined) p.emissive = it.emissive;
@@ -192,6 +319,19 @@
 
   const draw = {
     shadow(g, w, h) { const r = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); r.addColorStop(0, 'rgba(0,0,0,0.9)'); r.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = r; g.fillRect(0, 0, w, h); },
+    floor(g, w, h) {                                           // กระเบื้องไวนิล 60 cm ลายเม็ดละเอียด + ร่องยาแนว
+      g.fillStyle = '#8d9aa1'; g.fillRect(0, 0, w, h);
+      for (let k = 0; k < 2600; k++) { const v = 120 + ((k * 2654435761) >>> 0) % 70; g.fillStyle = 'rgba(' + v + ',' + (v + 8) + ',' + (v + 12) + ',0.35)'; g.fillRect(((k * 40503) >>> 0) % w, ((k * 9301) >>> 0) % h, 2, 2); }
+      g.fillStyle = 'rgba(40,52,58,0.55)'; g.fillRect(0, 0, w, 2); g.fillRect(0, 0, 2, h);
+      g.fillStyle = 'rgba(255,255,255,0.10)'; g.fillRect(2, 2, w, 1); g.fillRect(2, 2, 1, h);
+    },
+    weave(g, w, h) {                                           // bump map ลายทอผ้าสปันบอนด์ (เทากลาง = ราบ)
+      g.fillStyle = '#808080'; g.fillRect(0, 0, w, h);
+      for (let y = 0; y < h; y += 4) for (let x = 0; x < w; x += 4) {
+        const over = ((x + y) / 4) % 2 === 0; g.fillStyle = over ? '#9a9a9a' : '#6c6c6c';
+        if (over) g.fillRect(x, y, 4, 3); else g.fillRect(x, y, 3, 4);
+      }
+    },
     monitor(g, w, h) {
       g.fillStyle = '#05090b'; g.fillRect(0, 0, w, h);
       g.strokeStyle = '#33ff66'; g.lineWidth = 3; g.beginPath();
@@ -220,8 +360,8 @@
     // ลำดับ xs เรียงจากเท้า (X มาก) ไปเอว (X น้อย): ทุกหน้าตัดเป็นครึ่งวงรีบนเตียง (ด้านล่างแบนที่ผิวเบาะ)
     for (let i = 0; i < n; i++) {
       for (let j = 0; j <= NU; j++) {
-        const u = Math.PI * j / NU, h = Math.max(0.02, it.top[i] - it.bottom);
-        pos.push(it.xs[i], it.halfWidth[i] * Math.cos(u), it.bottom + h * Math.sin(u));
+        const u = Math.PI * j / NU, h = Math.max(0.02, it.top[i] - it.bottom), cu = Math.cos(u), su = Math.sin(u);
+        pos.push(it.xs[i], it.halfWidth[i] * Math.sign(cu) * Math.pow(Math.abs(cu), 0.62), it.bottom + h * Math.pow(su, 0.62));   // ทรงเหลี่ยมมน (ไม่ตัดมุมขา)
       }
     }
     for (let i = 0; i < n - 1; i++) for (let j = 0; j < NU; j++) {
@@ -235,13 +375,28 @@
     return g;
   }
 
+  function clothGeometry(THREE, it) {
+    const sf = drapeSurface(it), g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(sf.pos, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(sf.uv, 2));
+    g.setIndex(sf.idx);
+    g.computeVertexNormals();
+    return g;
+  }
+
+  const NO_CAST = /^(room-shell|floor|ceiling|wainscot|baseboard|monitor-screen|wall-clock|door-window|mayo-cloth)/;
+
   /** สร้างเมชทั้งห้องเป็นกลุ่มเดียว: opts = {canvas: () => canvas (ไม่ใส่ = ไม่มีพื้นผิวภาพ)} */
   function build(THREE, L, opts) {
     const o = opts || {}, group = new THREE.Group();
     group.name = 'procedure-room';
     for (const it of L.items) {
       let mesh = null;
-      if (it.kind === 'box') mesh = new THREE.Mesh(new THREE.BoxGeometry(it.size[0], it.size[1], it.size[2]), mat(THREE, it));
+      if (it.kind === 'box') {
+        const m = mat(THREE, it), tx = it.texture === 'floor' ? makeTexture(THREE, o.canvas, draw.floor, 256, 256) : null;
+        if (tx) { tx.wrapS = tx.wrapT = THREE.RepeatWrapping; if (tx.repeat && tx.repeat.set) tx.repeat.set(Math.round(it.size[0] / 0.6), Math.round(it.size[1] / 0.6)); m.map = tx; }
+        mesh = new THREE.Mesh(new THREE.BoxGeometry(it.size[0], it.size[1], it.size[2]), m);
+      }
       else if (it.kind === 'shell') mesh = new THREE.Mesh(new THREE.BoxGeometry(it.size[0], it.size[1], it.size[2]), Object.assign(mat(THREE, it), {side: THREE.BackSide}));
       else if (it.kind === 'cyl') {
         mesh = new THREE.Mesh(new THREE.CylinderGeometry(it.r, it.r, it.h, 24), mat(THREE, it));
@@ -251,7 +406,9 @@
         mesh.scale.set(it.radii[0], it.radii[1], it.radii[2]);
       } else if (it.kind === 'drape') {
         const m = mat(THREE, it); m.side = THREE.DoubleSide;
-        mesh = new THREE.Mesh(drapeGeometry(THREE, it), m);
+        const bump = it.texture === 'weave' ? makeTexture(THREE, o.canvas, draw.weave, 128, 128) : null;
+        if (bump) { bump.wrapS = bump.wrapT = THREE.RepeatWrapping; m.bumpMap = bump; m.bumpScale = 0.5; }
+        mesh = new THREE.Mesh(it.cloth ? clothGeometry(THREE, it) : drapeGeometry(THREE, it), m);
       } else if (it.kind === 'shadow') {
         const tex = makeTexture(THREE, o.canvas, draw.shadow, 128, 128);
         mesh = new THREE.Mesh(new THREE.PlaneGeometry(it.size[0], it.size[1]),
@@ -272,16 +429,35 @@
       if (it.kind === 'shadow') { /* ระนาบ XY อยู่ราบกับพื้นอยู่แล้ว */ }
       if (it.kind === 'box' && it.rotZ) mesh.rotation.z = it.rotZ;
       if (it.kind === 'shadow') mesh.renderOrder = 1;
+      const solid = it.kind !== 'shadow' && it.kind !== 'screen' && it.kind !== 'clock';
+      mesh.castShadow = solid && !NO_CAST.test(it.name) && !(it.opacity !== undefined && it.opacity < 1);   // เงาจริงจากโคม/ไฟเพดาน
+      mesh.receiveShadow = solid;
       group.add(mesh);
     }
     // แสง: โคมผ่าตัดส่องหน้าอก + แสงฟ้า-พื้นอ่อนๆ ให้ห้องไม่ทึบ
-    const spot = new THREE.SpotLight(0xfff2dd, 0.5, 0, 0.55, 0.7, 1);
+    const shadowOf = (light, size, near, far) => {
+      light.castShadow = true;
+      if (light.shadow) {
+        if (light.shadow.mapSize && light.shadow.mapSize.set) light.shadow.mapSize.set(size, size);
+        if (light.shadow.camera) { light.shadow.camera.near = near; light.shadow.camera.far = far; }
+        light.shadow.bias = -0.0004; light.shadow.normalBias = 0.012;
+      }
+    };
+    const spot = new THREE.SpotLight(0xfff2dd, 0.85, 0, 0.55, 0.65, 1);     // โคมผ่าตัด: วงแสงนุ่มบนหน้าอก เงาคมใกล้ตัวผู้ป่วย
     spot.position.set(L.lamp.pos[0], L.lamp.pos[1], L.lamp.pos[2]);
     spot.target.position.set(L.lamp.target[0], L.lamp.target[1], L.lamp.target[2]);
+    shadowOf(spot, 2048, 0.25, 3.5);
     group.add(spot); group.add(spot.target);
-    group.add(new THREE.HemisphereLight(0xffffff, 0x9aa7ad, 0.25));
+    const lt = L.lights || {ceilZ: L.ceilZ, ceilingXs: []};
+    for (const x of lt.ceilingXs) {                      // แสงจากไฟเพดานทั้งสองดวง: เงาโต๊ะ/ขาตั้ง/เก้าอี้ลงพื้น
+      const c = new THREE.SpotLight(0xf4f8ff, 0.4, 0, 1.15, 0.9, 1);
+      c.position.set(x, 0, lt.ceilZ - 0.05); c.target.position.set(x, 0, L.floorZ);
+      shadowOf(c, 1024, 0.2, lt.ceilZ - L.floorZ + 0.5);
+      group.add(c); group.add(c.target);
+    }
+    group.add(new THREE.HemisphereLight(0xffffff, 0x9aa7ad, 0.3));
     return group;
   }
 
-  return {layout, build, DEFAULTS: D, COLORS: C};
+  return {layout, build, clothField, drapeSurface, DEFAULTS: D, COLORS: C};
 });

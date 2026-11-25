@@ -230,6 +230,35 @@
       return Object.assign({positions: pos, indices}, m);
     }
 
+    /** สนามความสูงของผิวด้านบน: x สูงสุดของผิวทั้งตัว (ลำตัว ขา แขน) ในแต่ละช่อง (z, y) ขนาด cell เมตร
+     *  ใช้ให้ผ้าคลุมทิ้งตัวพาดผิวจริงโดยไม่มีส่วนใดโผล่ (ไม่ต้องใช้ THREE)
+     *  คืน {z0, y0, cell, nz, ny, top: Float32Array(nz*ny)}: ช่อง (i, j) อยู่ที่ z = z0 + i*cell, y = y0 + j*cell; NaN = ไม่มีผิว */
+    skinTopField(zLo, zHi, yHalf, cell) {
+      const m = this.manifest.meshes.find(q => q.group === 'skin');
+      if (!m) return null;
+      const nz = Math.round((zHi - zLo) / cell) + 1, ny = Math.round(2 * yHalf / cell) + 1;
+      const top = new Float32Array(nz * ny).fill(NaN);
+      const d = this.meshData(m), P = d.positions, I = d.indices;
+      const put = (x, y, z) => {
+        const i = Math.round((z - zLo) / cell), j = Math.round((y + yHalf) / cell);
+        if (i < 0 || i >= nz || j < 0 || j >= ny) return;
+        const k = i * ny + j;
+        if (!(top[k] >= x)) top[k] = x;
+      };
+      for (let t = 0; t < I.length; t += 3) {
+        const a = I[t] * 3, b = I[t + 1] * 3, c = I[t + 2] * 3;
+        const e = Math.max(Math.hypot(P[a] - P[b], P[a + 1] - P[b + 1], P[a + 2] - P[b + 2]),
+          Math.hypot(P[b] - P[c], P[b + 1] - P[c + 1], P[b + 2] - P[c + 2]),
+          Math.hypot(P[c] - P[a], P[c + 1] - P[a + 1], P[c + 2] - P[a + 2]));
+        const n = clamp(Math.ceil(e / (cell * 0.7)), 1, 14);   // สามเหลี่ยมใหญ่: สุ่มจุดภายในด้วย (กันช่องว่างบนขาที่เมชหยาบ)
+        for (let u = 0; u <= n; u++) for (let v = 0; v <= n - u; v++) {
+          const w = n - u - v, fu = u / n, fv = v / n, fw = w / n;
+          put(P[a] * fw + P[b] * fu + P[c] * fv, P[a + 1] * fw + P[b + 1] * fu + P[c + 1] * fv, P[a + 2] * fw + P[b + 2] * fu + P[c + 2] * fv);
+        }
+      }
+      return {z0: zLo, y0: -yHalf, cell, nz, ny, top};
+    }
+
     /** สร้างเมชของผิว / กระดูก / อวัยวะ: mats = {skin, bone, cart, heart, vessel, liver, stomach, diaphragm, airway, esoph}
      *  คืน {skin: Mesh, bones: Group, organs: Group} (วัสดุที่ไม่ได้ส่งมาใช้ mats.default) */
     build(THREE, mats) {

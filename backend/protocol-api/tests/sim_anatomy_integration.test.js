@@ -64,7 +64,7 @@ function makeSandbox() {
       build: (T, L, o) => { const g = new T.Group(); g.name = 'room-' + roomCalls.length; g.built = o; return g; },
     },
     simGL: {
-      patient, scene, mat, skinMat: () => mat(0xf1c9a8, 0.3), lungMat: mat(0xe58a9a, 0.8), lungMm: 7, userPicked: false,
+      patient, scene, mat, skinMat: () => mat(0xf1c9a8, 1), glassMat: () => mat(0xfff0e2, 0.34), lungMat: mat(0xe58a9a, 0.8), lungMm: 7, userPicked: false,
       skin: old('skin'), body: old('body'), ribs: old('ribs'), zone: old('zone'), lungs: old('lungs'),
       bed: new THREE.Mesh(null, null), ray: {origin: null, dir: null, set(o, d) { this.origin = o; this.dir = d; }, intersectObject(obj) {
         this.picked = obj; return [{point: new V3(this.origin.x + this.dir.x * 0.3, this.origin.y + this.dir.y * 0.3, this.origin.z + this.dir.z * 0.3)}]; }},
@@ -89,6 +89,9 @@ test('simAttachAnatomy สลับฉากเป็นโมเดลจริ
   assert.ok(!P.children.some(c => c.tag), 'ชิ้นส่วนสูตรเดิมต้องถูกถอดออกหมด');
   for (const part of [G.skin, G.body, G.ribs, G.zone, G.lungs, G.pick]) assert.ok(P.children.includes(part));
   assert.equal(G.pick.visible, false);
+  assert.equal(G.skin.children.length, 1, 'ผิวใสสีอ่อนเฉพาะรอบเข็มเป็นลูกของผิวทึบ');
+  assert.equal(G.skin.children[0].geometry, G.skin.geometry);
+  assert.ok(G.skin.castShadow && G.skin.receiveShadow);
   assert.equal(G.zone.children.length, 2);
   assert.equal(G.lungs.children.length, 2);                        // organs + lungsDyn
   assert.equal(G.lungMm, 0);                                       // บังคับสร้างปอดใหม่ในเฟรมถัดไป
@@ -144,6 +147,8 @@ test('ห้องทำหัตถการ: สร้างตามหลั
   assert.equal(roomCalls.length, 2);
   assert.equal(roomCalls[1].backX, A.landmarks.backX);
   assert.equal(roomCalls[1].env, A.manifest.env);
+  assert.ok(roomCalls[1].skinField && roomCalls[1].skinField.top.length > 1000, 'ส่งสนามความสูงผิวจริงให้ผ้าคลุม');
+  assert.equal(roomCalls[0].skinField, undefined);
   assert.ok(G.room !== first && G.scene.children.includes(G.room));
   assert.ok(!G.scene.children.includes(first), 'ห้องเดิมต้องถูกถอดออก');
   assert.equal(typeof G.room.built.canvas, 'function');             // ตัวสร้างพื้นผิวภาพ (จอมอนิเตอร์/นาฬิกา/เงา)
