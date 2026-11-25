@@ -134,7 +134,7 @@ test('ผ้า (มีผิวจริง): ยังมีข้อมูล
 });
 
 test('ผ้าอยู่เหนือผิวทุกจุดของร่างกายจริง (ขา แขน เท้า สะโพก): ไม่มีส่วนของหุ่นโผล่นอกผ้า', () => {
-  const m = man.meshes.find(q => q.group === 'skin'), d = A.meshData(m), P = d.positions, I = d.indices;
+  const m = man.meshes.find(q => q.group === 'skin'), d = A.posedData(m), P = d.positions, I = d.indices;   // ผิวท่าแขนราบเตียง (ตรงกับที่ผ้าคำนวณ)
   const yE = SF.pos[(E0 * NV + K + NY - 1) * 3 + 1];
   const clothZ = (z, y) => {                                                 // bilinear บนแถวบนของกริดผ้า
     const fi = (-z - X0) / (X1 - X0), j = (y + yE) / (2 * yE) * (NY - 1);
@@ -215,4 +215,10 @@ test('build (มี Standard material): ผ้ามี uv + bump, โคมส�
   assert.equal(lights.length, 3);
   assert.ok(lights.every(l => l.castShadow === true));
   assert.deepEqual(lights[0].shadowSize, [2048, 2048]);
+});
+
+test('drape: false ไม่สร้างผ้าคลุม (แม้มี env และ skinField) แต่ห้อง เตียง หมอนยังครบ', () => {
+  const L3 = ProcedureRoom.layout({backX: man.landmarks.backX, env: man.env, skinField: FIELD, drape: false});
+  assert.ok(!L3.items.some(i => i.kind === 'drape'));
+  for (const n of ['table-pad', 'pillow', 'lamp-head', 'mayo-tray']) assert.ok(L3.items.some(i => i.name === n), n);
 });

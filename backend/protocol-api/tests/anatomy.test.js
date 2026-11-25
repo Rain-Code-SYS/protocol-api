@@ -160,3 +160,24 @@ test('skinTopField: สนามความสูงผิวทั้งตั
   assert.ok(f.top[i0 * f.ny + j0] > A.landmarks.backX + 0.03, 'หน้าแข้งต้องสูงกว่าผิวเบาะ');
   for (const v of f.top.slice(0, f.ny)) assert.ok(Number.isNaN(v) || v < skin.max[0] + 1e-5);   // แถว z ต่ำสุด (ใต้ปลายเท้า) ไม่เกินกรอบ
 });
+
+test('ท่าแขนราบเตียง: แขนทั้งท่อนแนบเบาะ ลำตัว/ขา/ศีรษะไม่ขยับ มืออยู่ในกรอบเบาะ และปิดได้', () => {
+  const sk = manifest.meshes.find(m => m.group === 'skin'), hu = manifest.meshes.filter(m => m.group === 'humerus');
+  const raw = A.meshData(sk).positions, pz = A.posedData(sk).positions, back = A.landmarks.backX;
+  for (let i = 0; i < raw.length; i += 3) {
+    if (Math.abs(raw[i + 1]) < 0.17 || raw[i + 2] > 0.27) for (let c = 0; c < 3; c++) assert.equal(pz[i + c], raw[i + c], 'ลำตัว/ศีรษะ/ขาต้องไม่ขยับ');
+  }
+  for (const z of [0.12, 0.0, -0.1, -0.2, -0.3, -0.4]) {
+    let mn = Infinity, maxY = 0;
+    for (let i = 0; i < pz.length; i += 3) if (Math.abs(pz[i + 2] - z) < 0.01 && Math.abs(pz[i + 1]) > 0.185) { mn = Math.min(mn, pz[i]); maxY = Math.max(maxY, Math.abs(pz[i + 1])); }
+    assert.ok(mn - back > -0.012 && mn - back < 0.012, `z=${z}: แขนต้องแนบเบาะ (${((mn - back) * 1000).toFixed(1)} mm)`);
+    assert.ok(maxY < 0.30, `z=${z}: มืออยู่ในกรอบเบาะ (${maxY})`);
+  }
+  for (const m of hu) {   // กระดูกต้นแขนเลื่อนตามผิว: ยังอยู่ใต้ผิวแขนที่ความสูงเดียวกัน
+    const hp = A.posedData(m).positions;
+    for (let i = 0; i < hp.length; i += 3) assert.ok(hp[i] >= back - 0.012, 'กระดูกไม่จมเบาะ');
+  }
+  A.armsOnBed = false;
+  assert.deepEqual(Array.from(A.posedData(sk).positions.slice(0, 600)), Array.from(raw.slice(0, 600)));
+  A.armsOnBed = true;
+});

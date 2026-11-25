@@ -17,6 +17,7 @@
 
   const TAU = 2 * Math.PI;
   const SITE = {ribTop: 3, ribBot: 6, minY: 0.07};   // โซนเจาะ: ช่องซี่โครงที่ 4-6 (ระหว่างซี่โครงซี่ที่ 4 กับ 7) หน้า mid-axillary line และห่างกระดูกอก >= 7 cm
+  const ARM_Y0 = 0.172, ARM_Y1 = 0.19, ARM_IN = 0.04;   // แขนเริ่มที่ |y| ≈ 0.17-0.19 m; ท่อนล่างขยับเข้า 4 cm
   const BONE_GROUPS = ['rib', 'cart', 'sternum', 'clav', 'scap', 'humerus', 'vert', 'sacrum'];
   const SITE_RADIAL_TOL = 0.02;                      // จุดที่ชนต้องอยู่บนผิวลำตัว (ไม่ใช่แขน) ภายใน 2 cm จากรัศมีผิวในตาราง
   const LUNG_WALL_MARGIN = 0.005;                    // ปอดอยู่ลึกกว่าผิวด้านในของกรงซี่โครงอย่างน้อยเท่านี้ (เมตร)
@@ -31,6 +32,7 @@
     constructor(manifest, buffer) {
       if (!manifest || !manifest.polar || !manifest.ribs) throw new Error('anatomy manifest ไม่ถูกต้อง');
       this.manifest = manifest;
+      this.armsOnBed = true;   // false = ท่าแขนห้อยเดิมของโมเดล
       this.buffer = buffer && buffer.buffer && !(buffer instanceof ArrayBuffer)
         ? buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) : buffer;
       const P = manifest.polar;
@@ -230,6 +232,51 @@
       return Object.assign({positions: pos, indices}, m);
     }
 
+    // ---------- ท่าแขนราบบนเตียง ----------
+    // โมเดลเป็นท่ายืน แขนห้อยข้างลำตัว: พอนอนหงายแขนท่อนบนลอยจากเตียง ~5 ซม. ท่อนล่างและมือลอย 14-23 ซม.
+    // จึงเลื่อนจุดของ "แขน" (ผิวและกระดูกต้นแขน) ลงไปทางเตียงตามความสูงตามแนวแขน ให้ด้านล่างของแขนแนบเตียงพอดี
+    // และขยับท่อนล่างเข้าหาลำตัวเล็กน้อยให้มืออยู่บนเบาะ ลำตัว/ขา/ศีรษะไม่ถูกแตะ (น้ำหนักตามระยะห่างด้านข้างและความสูงของไหล่)
+    armProfile() {
+      if (this._armProf) return this._armProf;
+      const skin = this.manifest.meshes.find(q => q.group === 'skin');
+      const zLo = -0.56, zHi = 0.27, dz = 0.02, n = Math.round((zHi - zLo) / dz) + 1, bot = new Float32Array(n).fill(NaN);
+      if (skin) {
+        const P = this.meshData(skin).positions;
+        for (let i = 0; i < P.length; i += 3) {
+          if (Math.abs(P[i + 1]) < ARM_Y1 || P[i + 2] < zLo - dz / 2 || P[i + 2] > zHi + dz / 2) continue;
+          const k = Math.round((P[i + 2] - zLo) / dz);
+          if (!(bot[k] <= P[i])) bot[k] = P[i];                     // x ต่ำสุดของแขนในแต่ละชั้นความสูง (NaN → ตั้งค่าแรก)
+        }
+      }
+      const target = this.landmarks.backX - 0.004;   // แขนจมเบาะ ~4 mm (ซ่อนในเบาะ) ให้ดูวางทับเบาะ ไม่ลอย
+      let d = Array.from(bot, b => (Number.isFinite(b) ? Math.max(0, b - target) : NaN));
+      let last = NaN; for (let k = 0; k < n; k++) { if (Number.isFinite(d[k])) last = d[k]; else if (Number.isFinite(last)) d[k] = last; }
+      last = NaN; for (let k = n - 1; k >= 0; k--) { if (Number.isFinite(d[k])) last = d[k]; else if (Number.isFinite(last)) d[k] = last; }
+      d = d.map(v => (Number.isFinite(v) ? v : 0));
+      const sm = d.map((v, k) => (d[Math.max(0, k - 1)] + 2 * v + d[Math.min(n - 1, k + 1)]) / 4);   // เกลี่ยระหว่างชั้นให้ผิวไม่เป็นขั้น
+      return (this._armProf = {zLo, dz, n, delta: sm});
+    }
+
+    /** เลื่อนจุดของแขนลงเตียงแบบ in-place (positions = Float32Array xyz ในพิกัดผู้ป่วย) */
+    poseArms(P) {
+      const pr = this.armProfile(), sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+      for (let i = 0; i < P.length; i += 3) {
+        const y = P[i + 1], z = P[i + 2], w = sstep(ARM_Y0, ARM_Y1 + 0.005, Math.abs(y)) * (1 - sstep(0.17, 0.26, z));
+        if (w <= 0) continue;
+        const f = clamp((z - pr.zLo) / pr.dz, 0, pr.n - 1), k = Math.min(pr.n - 2, Math.floor(f)), u = f - k;
+        P[i] -= w * (pr.delta[k] * (1 - u) + pr.delta[k + 1] * u);
+        P[i + 1] = y - Math.sign(y) * w * ARM_IN * sstep(0.2, 0.34, -z);   // ท่อนล่าง/มือขยับเข้าหาลำตัว
+      }
+      return P;
+    }
+
+    /** meshData + ท่าแขนราบเตียง (ใช้กับผิวและกระดูกต้นแขน) — เมชอื่นคงเดิม */
+    posedData(m) {
+      const d = this.meshData(m);
+      if (this.armsOnBed && (m.group === 'skin' || m.group === 'humerus')) this.poseArms(d.positions);
+      return d;
+    }
+
     /** สนามความสูงของผิวด้านบน: x สูงสุดของผิวทั้งตัว (ลำตัว ขา แขน) ในแต่ละช่อง (z, y) ขนาด cell เมตร
      *  ใช้ให้ผ้าคลุมทิ้งตัวพาดผิวจริงโดยไม่มีส่วนใดโผล่ (ไม่ต้องใช้ THREE)
      *  คืน {z0, y0, cell, nz, ny, top: Float32Array(nz*ny)}: ช่อง (i, j) อยู่ที่ z = z0 + i*cell, y = y0 + j*cell; NaN = ไม่มีผิว */
@@ -238,7 +285,7 @@
       if (!m) return null;
       const nz = Math.round((zHi - zLo) / cell) + 1, ny = Math.round(2 * yHalf / cell) + 1;
       const top = new Float32Array(nz * ny).fill(NaN);
-      const d = this.meshData(m), P = d.positions, I = d.indices;
+      const d = this.posedData(m), P = d.positions, I = d.indices;
       const put = (x, y, z) => {
         const i = Math.round((z - zLo) / cell), j = Math.round((y + yHalf) / cell);
         if (i < 0 || i >= nz || j < 0 || j >= ny) return;
@@ -265,7 +312,7 @@
       const bones = new THREE.Group(), organs = new THREE.Group();
       let skin = null;
       for (const m of this.manifest.meshes) {
-        const d = this.meshData(m), g = new THREE.BufferGeometry();
+        const d = this.posedData(m), g = new THREE.BufferGeometry();
         g.setAttribute('position', new THREE.BufferAttribute(d.positions, 3));
         g.setIndex(new THREE.BufferAttribute(d.indices, 1));
         g.computeVertexNormals();

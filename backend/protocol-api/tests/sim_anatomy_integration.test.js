@@ -69,7 +69,7 @@ function makeSandbox() {
       bed: new THREE.Mesh(null, null), ray: {origin: null, dir: null, set(o, d) { this.origin = o; this.dir = d; }, intersectObject(obj) {
         this.picked = obj; return [{point: new V3(this.origin.x + this.dir.x * 0.3, this.origin.y + this.dir.y * 0.3, this.origin.z + this.dir.z * 0.3)}]; }},
     },
-    simTarget: null, SIM_PICK_ANYWHERE: true,
+    simTarget: null, SIM_PICK_ANYWHERE: true, SIM_DRAPE: true,
   };
   sandbox.tubeGeo = rings => ({rings});
   scene.updateMatrixWorld = () => {};
@@ -152,4 +152,13 @@ test('ห้องทำหัตถการ: สร้างตามหลั
   assert.ok(G.room !== first && G.scene.children.includes(G.room));
   assert.ok(!G.scene.children.includes(first), 'ห้องเดิมต้องถูกถอดออก');
   assert.equal(typeof G.room.built.canvas, 'function');             // ตัวสร้างพื้นผิวภาพ (จอมอนิเตอร์/นาฬิกา/เงา)
+});
+test('ผ้าคลุมปิดได้ (SIM_DRAPE = false): ไม่ส่งสนามความสูงผิวและสั่งผังไม่สร้างผ้า', () => {
+  const {sandbox, roomCalls} = makeSandbox();
+  sandbox.SIM_DRAPE = false;
+  vm.runInContext('simAttachAnatomy', sandbox)(A);
+  const last = roomCalls[roomCalls.length - 1];
+  assert.equal(last.drape, false);
+  assert.equal(last.skinField, undefined);
+  assert.equal(html.match(/const SIM_DRAPE = (\w+);/)[1], 'false', 'ค่าตั้งต้นในหน้าเว็บ = ไม่มีผ้า');
 });

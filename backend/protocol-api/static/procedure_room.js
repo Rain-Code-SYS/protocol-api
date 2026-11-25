@@ -74,7 +74,7 @@
     sph('pillow', [-(headTopZ - 0.09), 0, padTop + pillowT / 2 - 0.01], [0.17, 0.21, pillowT / 2], C.pillow, {shininess: 5});
 
     // ผ้าคลุมช่วงล่าง (จากโปรไฟล์ขาจริงของผู้ป่วย): เริ่มต่ำกว่าเอวลงไปถึงปลายเท้า
-    if (env) {
+    if (env && o.drape !== false) {      // drape: false = ไม่มีผ้าคลุม
       const zs = [], hw = [], ant = [];
       for (let i = 0; i < env.n; i++) {
         zs.push(-(env.z0 + i * env.dz));                      // พิกัดโลก X = -z ผู้ป่วย (เรียงจากเท้าไปเอว)
@@ -443,19 +443,19 @@
         light.shadow.bias = -0.0004; light.shadow.normalBias = 0.012;
       }
     };
-    const spot = new THREE.SpotLight(0xfff2dd, 0.85, 0, 0.55, 0.65, 1);     // โคมผ่าตัด: วงแสงนุ่มบนหน้าอก เงาคมใกล้ตัวผู้ป่วย
+    const spot = new THREE.SpotLight(0xfff2dd, 0.32, 0, 0.55, 0.7, 1);     // โคมผ่าตัด: วงแสงนุ่มบนหน้าอก เงาคมใกล้ตัวผู้ป่วย
     spot.position.set(L.lamp.pos[0], L.lamp.pos[1], L.lamp.pos[2]);
     spot.target.position.set(L.lamp.target[0], L.lamp.target[1], L.lamp.target[2]);
     shadowOf(spot, 2048, 0.25, 3.5);
     group.add(spot); group.add(spot.target);
     const lt = L.lights || {ceilZ: L.ceilZ, ceilingXs: []};
     for (const x of lt.ceilingXs) {                      // แสงจากไฟเพดานทั้งสองดวง: เงาโต๊ะ/ขาตั้ง/เก้าอี้ลงพื้น
-      const c = new THREE.SpotLight(0xf4f8ff, 0.4, 0, 1.15, 0.9, 1);
+      const c = new THREE.SpotLight(0xf4f8ff, 0.16, 0, 1.15, 0.9, 1);
       c.position.set(x, 0, lt.ceilZ - 0.05); c.target.position.set(x, 0, L.floorZ);
       shadowOf(c, 1024, 0.2, lt.ceilZ - L.floorZ + 0.5);
       group.add(c); group.add(c.target);
     }
-    group.add(new THREE.HemisphereLight(0xffffff, 0x9aa7ad, 0.3));
+    group.add(new THREE.HemisphereLight(0xffffff, 0x9aa7ad, 0.16));
     return group;
   }
 

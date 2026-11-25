@@ -1188,6 +1188,7 @@ const ribZ0 = k => 0.278 - 0.023 * k, ribDrop = k => 0.02 + 0.011 * k;   // ซ�
 const ribZ = (k, c) => ribZ0(k) - ribDrop(k) * (1 + c) / 2;   // ระดับซี่โครงที่มุม cosθ = c
 // โซนเจาะที่อนุญาต (ตำแหน่งใส่ ICD): ช่องซี่โครงที่ 4-6 = ระหว่างซี่ 4 ถึงซี่ 7, หน้าเส้น mid-axillary line (x>0), ห่างแนวกลางตัวอย่างน้อย 7 ซม. (พ้นกระดูกอก)
 const SIM_SITE = {ribTop: 3, ribBot: 6, minY: 0.07};
+const SIM_DRAPE = false;   // true = มีผ้าคลุมช่วงล่างของผู้ป่วย (ผ้าทิ้งตัวพาดผิวจริง)
 const SIM_PICK_ANYWHERE = true;   // false = คลิกนอกโซนไม่ได้ | true = คลิกได้ทุกที่ แต่ถ้าเจาะนอกโซนจะเฟลทันทีที่เข็มแตะผิว
 function simSiteOk(p){   // p = [x, y, z] ในพิกัดตัวผู้ป่วย
   if (ANAT) return ANAT.siteOk(p, SIM_SITE);   // แนวซี่โครงจริง
@@ -1220,8 +1221,8 @@ function simInitGL(){
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;   // เงาจริงจากโคมผ่าตัดและไฟเพดาน (ตั้งใน procedure_room.js)
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(35, 1, 0.01, 5);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-  const sun = new THREE.DirectionalLight(0xffffff, 0.5); sun.position.set(-1, -1.5, 2); scene.add(sun);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.22); sun.position.set(-1, -1.5, 2); scene.add(sun);
   const patient = new THREE.Group(); patient.rotation.y = -Math.PI / 2; scene.add(patient);   // ตัวผู้ป่วย: หมุนจากท่านั่ง (หน้า +X) ให้นอนหงาย (หน้าอก +Z)
   const mat = (color, opacity, extra) => new THREE.MeshPhongMaterial(Object.assign({color, transparent: opacity < 1, opacity, side: THREE.DoubleSide, shininess: 30}, extra));
   // ผิวหนังทึบแสง มองไม่เห็นด้านใน ยกเว้นวงรอบจุดเจาะ (skinHole, รัศมี skinHoleR): ตรงกลางโปร่งใสให้เห็นอวัยวะ/เข็ม ขอบค่อยๆ ทึบด้วย dither
@@ -1241,7 +1242,7 @@ function simInitGL(){
     };
     return m;
   };
-  const skinMat = () => holeShader(mat(0xf1c9a8, 1, {shininess: 22, specular: 0x222222}), false);
+  const skinMat = () => holeShader(mat(0xe9bf9c, 1, {shininess: 18, specular: 0x141414}), false);
   const glassMat = () => holeShader(mat(0xfff0e2, 0.34, {side: THREE.FrontSide, depthWrite: false, shininess: 60, specular: 0x444444}), true);
   const skinGlass = base => { const g = new THREE.Mesh(base.geometry, glassMat()); g.renderOrder = 2; base.add(g); return g; };
   const zsl = []; for (let i = 0; i <= 32; i++) zsl.push(-0.30 + 0.64 * i / 32);
@@ -1334,8 +1335,9 @@ function simBuildRoom(){   // ห้องทำหัตถการรอบ�
     G.room.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
   }
   // ผ้าคลุมทิ้งตัวพาดผิวจริงของผู้ป่วย (ขา แขน เท้า): ใช้สนามความสูงของผิวทั้งตัว คำนวณครั้งเดียวต่อโมเดล
-  const field = ANAT && ANAT.skinTopField ? (ANAT._clothField || (ANAT._clothField = ANAT.skinTopField(-1.35, -0.06, 0.31, 0.01))) : undefined;
-  const L = ProcedureRoom.layout({backX: ANAT ? ANAT.landmarks.backX : undefined, env: ANAT ? ANAT.manifest.env : undefined, skinField: field});
+  const drapeOn = typeof SIM_DRAPE !== 'undefined' && SIM_DRAPE;
+  const field = drapeOn && ANAT && ANAT.skinTopField ? (ANAT._clothField || (ANAT._clothField = ANAT.skinTopField(-1.35, -0.06, 0.31, 0.01))) : undefined;
+  const L = ProcedureRoom.layout({backX: ANAT ? ANAT.landmarks.backX : undefined, env: ANAT ? ANAT.manifest.env : undefined, drape: drapeOn, skinField: field});
   G.room = ProcedureRoom.build(THREE, L, {canvas: () => document.createElement('canvas')});
   G.scene.add(G.room);
   if (G.bed) G.bed.visible = false;   // เตียงเดิมถูกแทนด้วยเตียงหัตถการในห้อง
