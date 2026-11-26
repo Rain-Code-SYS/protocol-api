@@ -1358,10 +1358,16 @@ function simAttachAnatomy(A){   // สลับลำตัว/กระดู�
     skin: G.skinMat(), bone: mat(0xe9e4d4, 1), cart: mat(0xcfc7ae, 1), sternum: mat(0xe9e4d4, 1),
     heart: mat(0xb5384a, 0.95, {shininess: 40}), vessel: mat(0x9c3b5a, 1), liver: mat(0x8a4b38, 0.9), stomach: mat(0xd9a5a5, 0.85),
     diaphragm: mat(0xc98f86, 0.45, {depthWrite: false}), airway: new THREE.MeshPhongMaterial({color: 0xcdbba0}), esoph: mat(0xc79a73, 1),
+    pants: mat(0x7da6bd, 1, {shininess: 8, specular: 0x0a0a0a}),   // กางเกงขายาวสีฟ้าอ่อน (ทับผิวช่วงสะโพก-ขา)
+    lid: G.skinMat(), lash: mat(0x3a2418, 1, {shininess: 6, specular: 0x000000}),   // เปลือกตาปิด + แนวขนตา
     default: mat(0xcccccc, 1)});
   [G.skin, G.body, G.ribs, G.zone, G.lungs].forEach(o => P.remove(o));
   G.skin = built.skin; G.body = new THREE.Group(); G.ribs = built.bones;
   G.skin.castShadow = G.skin.receiveShadow = true;
+  for (const extra of [built.pants, built.face]) if (extra) {   // กางเกง/เปลือกตา เป็นลูกของผิว: ซ่อน-แสดงตามชั้นผิวพร้อมกัน
+    extra.traverse(o => { o.castShadow = true; o.receiveShadow = true; });
+    G.skin.add(extra);
+  }
   if (G.glassMat) { const gl = new THREE.Mesh(G.skin.geometry, G.glassMat()); gl.renderOrder = 2; G.skin.add(gl); }   // ผิวใสสีอ่อนเฉพาะวงรอบเข็ม
   G.lungs = new THREE.Group(); G.lungsDyn = new THREE.Group(); G.lungs.add(built.organs); G.lungs.add(G.lungsDyn);
   G.pick = A.buildPick(THREE);

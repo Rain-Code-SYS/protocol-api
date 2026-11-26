@@ -89,8 +89,9 @@ test('simAttachAnatomy สลับฉากเป็นโมเดลจริ
   assert.ok(!P.children.some(c => c.tag), 'ชิ้นส่วนสูตรเดิมต้องถูกถอดออกหมด');
   for (const part of [G.skin, G.body, G.ribs, G.zone, G.lungs, G.pick]) assert.ok(P.children.includes(part));
   assert.equal(G.pick.visible, false);
-  assert.equal(G.skin.children.length, 1, 'ผิวใสสีอ่อนเฉพาะรอบเข็มเป็นลูกของผิวทึบ');
-  assert.equal(G.skin.children[0].geometry, G.skin.geometry);
+  assert.equal(G.skin.children.length, 2, 'ลูกของผิว: กางเกง + ผิวใสสีอ่อนเฉพาะรอบเข็ม');
+  assert.ok(G.skin.children.some(c => c.name === 'pants'), 'กางเกงเป็นลูกของผิว (ซ่อน-แสดงพร้อมชั้นผิว)');
+  assert.ok(G.skin.children.some(c => c.geometry === G.skin.geometry), 'ผิวใสใช้เมชเดียวกับผิว');
   assert.ok(G.skin.castShadow && G.skin.receiveShadow);
   assert.equal(G.zone.children.length, 2);
   assert.equal(G.lungs.children.length, 2);                        // organs + lungsDyn

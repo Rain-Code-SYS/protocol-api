@@ -17,7 +17,11 @@
 
   const TAU = 2 * Math.PI;
   const SITE = {ribTop: 3, ribBot: 6, minY: 0.07};   // โซนเจาะ: ช่องซี่โครงที่ 4-6 (ระหว่างซี่โครงซี่ที่ 4 กับ 7) หน้า mid-axillary line และห่างกระดูกอก >= 7 cm
-  const ARM_Y0 = 0.172, ARM_Y1 = 0.19, ARM_IN = 0.04;   // แขนเริ่มที่ |y| ≈ 0.17-0.19 m; ท่อนล่างขยับเข้า 4 cm
+  const ARM_Y0 = 0.172, ARM_Y1 = 0.19;   // แขนเริ่มที่ |y| ≈ 0.17-0.19 m (ลำตัวไม่เกิน ~0.17)
+  const ARM_ABD = 0.05, ARM_HAND_Y = 0.235;   // กางแขนที่ไหล่ ~3° ; ข้อมือวางที่ |y| = 0.235 m (ข้างต้นขา ในกรอบเบาะ)
+  const LEG_TOE_OUT = 0.21;   // ปลายเท้าตกออกด้านนอก ~12°
+  const LID = {x: 0.060, y: 0.036, z: 0.4255, rx: 0.0175, ry: 0.0165, rz: 0.0088};   // เปลือกตา: อุดเบ้าตาลึก ~17 mm ของโมเดลให้ผิวเรียบเท่าขอบเบ้า
+  const PANTS_TOP = -0.13, PANTS_HEM = -1.02, PANTS_Y = 0.18, PANTS_OFF = 0.0075;   // กางเกง: ใต้สะดือถึงเหนือข้อเท้า, ออฟเซ็ตจากผิว 7.5 mm
   const BONE_GROUPS = ['rib', 'cart', 'sternum', 'clav', 'scap', 'humerus', 'vert', 'sacrum'];
   const SITE_RADIAL_TOL = 0.02;                      // จุดที่ชนต้องอยู่บนผิวลำตัว (ไม่ใช่แขน) ภายใน 2 cm จากรัศมีผิวในตาราง
   const LUNG_WALL_MARGIN = 0.005;                    // ปอดอยู่ลึกกว่าผิวด้านในของกรงซี่โครงอย่างน้อยเท่านี้ (เมตร)
@@ -232,49 +236,229 @@
       return Object.assign({positions: pos, indices}, m);
     }
 
-    // ---------- ท่าแขนราบบนเตียง ----------
-    // โมเดลเป็นท่ายืน แขนห้อยข้างลำตัว: พอนอนหงายแขนท่อนบนลอยจากเตียง ~5 ซม. ท่อนล่างและมือลอย 14-23 ซม.
-    // จึงเลื่อนจุดของ "แขน" (ผิวและกระดูกต้นแขน) ลงไปทางเตียงตามความสูงตามแนวแขน ให้ด้านล่างของแขนแนบเตียงพอดี
-    // และขยับท่อนล่างเข้าหาลำตัวเล็กน้อยให้มืออยู่บนเบาะ ลำตัว/ขา/ศีรษะไม่ถูกแตะ (น้ำหนักตามระยะห่างด้านข้างและความสูงของไหล่)
-    armProfile() {
-      if (this._armProf) return this._armProf;
-      const skin = this.manifest.meshes.find(q => q.group === 'skin');
-      const zLo = -0.56, zHi = 0.27, dz = 0.02, n = Math.round((zHi - zLo) / dz) + 1, bot = new Float32Array(n).fill(NaN);
-      if (skin) {
-        const P = this.meshData(skin).positions;
-        for (let i = 0; i < P.length; i += 3) {
-          if (Math.abs(P[i + 1]) < ARM_Y1 || P[i + 2] < zLo - dz / 2 || P[i + 2] > zHi + dz / 2) continue;
-          const k = Math.round((P[i + 2] - zLo) / dz);
-          if (!(bot[k] <= P[i])) bot[k] = P[i];                     // x ต่ำสุดของแขนในแต่ละชั้นความสูง (NaN → ตั้งค่าแรก)
-        }
-      }
-      const target = this.landmarks.backX - 0.004;   // แขนจมเบาะ ~4 mm (ซ่อนในเบาะ) ให้ดูวางทับเบาะ ไม่ลอย
-      let d = Array.from(bot, b => (Number.isFinite(b) ? Math.max(0, b - target) : NaN));
-      let last = NaN; for (let k = 0; k < n; k++) { if (Number.isFinite(d[k])) last = d[k]; else if (Number.isFinite(last)) d[k] = last; }
-      last = NaN; for (let k = n - 1; k >= 0; k--) { if (Number.isFinite(d[k])) last = d[k]; else if (Number.isFinite(last)) d[k] = last; }
-      d = d.map(v => (Number.isFinite(v) ? v : 0));
-      const sm = d.map((v, k) => (d[Math.max(0, k - 1)] + 2 * v + d[Math.min(n - 1, k + 1)]) / 4);   // เกลี่ยระหว่างชั้นให้ผิวไม่เป็นขั้น
-      return (this._armProf = {zLo, dz, n, delta: sm});
+    // ---------- ท่านอนหงายตามธรรมชาติ ----------
+    // โมเดลเป็นท่ายืน (แขนห้อย ฝ่ามือหันไปด้านหน้า ขาลอยจากเตียง 3-6 cm อวัยวะเพศนูน) จึงจัดท่าใหม่ตอนสร้างเมช (ข้อมูลไฟล์ไม่ถูกแก้):
+    //  - แขน: หมุนแบบโครงกระดูก (ไหล่ + ศอก) ให้ท่อนบน/ท่อนล่างแนบเบาะ บิดท่อนล่างให้ฝ่ามือหันเข้าหาลำตัว มืออยู่ข้างต้นขา
+    //  - ขา: ลดลงแนบเบาะตามโปรไฟล์ด้านหลังจริง ปลายเท้าตกออกด้านนอกเล็กน้อย
+    //  - ผิวบริเวณอวัยวะเพศ: ปรับให้เรียบ (แล้วใส่กางเกงทับ ดู buildPants)
+    //  - ลำตัว ศีรษะ ไม่ถูกแตะ (ซี่โครง/ปอด/จุดเจาะคงตำแหน่งเดิม)
+    _rotAbout(p, c, a, th) {
+      const x = p[0] - c[0], y = p[1] - c[1], z = p[2] - c[2], co = Math.cos(th), si = Math.sin(th), dot = a[0] * x + a[1] * y + a[2] * z;
+      return [c[0] + x * co + (a[1] * z - a[2] * y) * si + a[0] * dot * (1 - co),
+        c[1] + y * co + (a[2] * x - a[0] * z) * si + a[1] * dot * (1 - co),
+        c[2] + z * co + (a[0] * y - a[1] * x) * si + a[2] * dot * (1 - co)];
     }
 
-    /** เลื่อนจุดของแขนลงเตียงแบบ in-place (positions = Float32Array xyz ในพิกัดผู้ป่วย) */
-    poseArms(P) {
-      const pr = this.armProfile(), sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+    /** โครงแขน (คำนวณครั้งเดียว): ข้อไหล่ S ศอก E ข้อมือ W (แขนซ้าย y>0 ส่วนขวาสะท้อน y) และมุมที่แก้ให้แนบเบาะ */
+    armRig() {
+      if (this._armRig) return this._armRig;
+      const meshes = this.manifest.meshes, skin = meshes.find(q => q.group === 'skin'), hum = meshes.find(q => q.group === 'humerus' && q.min[1] > 0);
+      const mean = (P, f) => { let n = 0; const a = [0, 0, 0]; for (let i = 0; i < P.length; i += 3) if (f(P[i], P[i + 1], P[i + 2])) { n++; a[0] += P[i]; a[1] += P[i + 1]; a[2] += P[i + 2]; } return n ? a.map(v => v / n) : null; };
+      const H = this.meshData(hum).positions, K = this.meshData(skin).positions;
+      const S = mean(H, (x, y, z) => z > 0.20) || [-0.03, 0.16, 0.225], E = mean(H, (x, y, z) => z < -0.045) || [-0.02, 0.22, -0.06];
+      const W = mean(K, (x, y, z) => y > ARM_Y1 && z < -0.29 && z > -0.31) || [0, 0.27, -0.30];
+      const ax = (() => { const v = [E[0] - W[0], E[1] - W[1], E[2] - W[2]], n = Math.hypot(...v); return v.map(q => q / n); })();
+      const rig = {S, E, W, axis: ax, g1: ARM_ABD, b1: 0, g2: 0, b2: 0, phi: -Math.PI / 2, target: this.landmarks.backX - 0.004};
+      // ชุดจุดแขนซ้ายที่ใช้แก้มุม: ท่อนบน (ใต้ไหล่ถึงเหนือศอก) / ท่อนล่าง+มือ
+      const upper = [], fore = [];
+      for (let i = 0; i < K.length; i += 3) {
+        if (K[i + 1] < ARM_Y1 + 0.005 || K[i + 2] > 0.17) continue;
+        if (K[i + 2] > E[2] + 0.04) upper.push([K[i], K[i + 1], K[i + 2]]); else if (K[i + 2] < E[2] - 0.12 && K[i + 2] > -0.6) fore.push([K[i], K[i + 1], K[i + 2]]);
+      }
+      const minX = (pts, f) => { let m = Infinity; for (const q of pts) { const r = f(q); if (r[0] < m) m = r[0]; } return m; };
+      const bis = (lo, hi, g) => { for (let k = 0; k < 40; k++) { const mid = (lo + hi) / 2; if (g(mid) > rig.target) lo = mid; else hi = mid; } return (lo + hi) / 2; };   // g ลดลงตามมุม
+      rig.b1 = bis(0, 0.7, b => { rig.b1 = b; return minX(upper, q => this._armPoint(q, rig, 0, 0)); });
+      // ท่อนล่าง: ให้ข้อมืออยู่ที่ y ≈ ARM_HAND_Y (ข้างต้นขา) ก่อน แล้วลดมุมศอกให้แนบเบาะ
+      const wy = g2 => { rig.g2 = g2; return this._armPoint(W, rig, 1, 0)[1]; };
+      { let lo = -0.5, hi = 0.5; for (let k = 0; k < 40; k++) { const mid = (lo + hi) / 2; if (wy(mid) > ARM_HAND_Y) hi = mid; else lo = mid; } rig.g2 = (lo + hi) / 2; }
+      rig.b2 = bis(-0.4, 1.0, b => { rig.b2 = b; return minX(fore, q => this._armPoint(q, rig, 1, this._twistW(q[2], rig))); });
+      return (this._armRig = rig);
+    }
+
+    _twistW(z, rig) { const t = clamp((rig.E[2] - z) / (rig.E[2] - rig.W[2]), 0, 1); return t * t * (3 - 2 * t); }
+
+    /** จุด v (แขนซ้าย) หลังหมุนโซ่ไหล่→ศอก: f = 0 ท่อนบน, 1 ท่อนล่าง; tw = น้ำหนักการบิดท่อนล่าง (pronation) */
+    _armPoint(v, r, f, tw) {
+      const chainS = p => this._rotAbout(this._rotAbout(p, r.S, [0, 1, 0], r.b1), r.S, [1, 0, 0], r.g1);
+      const up = chainS(v);
+      if (f <= 0) return up;
+      const t = this._rotAbout(v, r.E, r.axis, r.phi * tw);
+      const fo = chainS(this._rotAbout(this._rotAbout(t, r.E, [0, 1, 0], r.b2), r.E, [1, 0, 0], r.g2));
+      return f >= 1 ? fo : [up[0] + (fo[0] - up[0]) * f, up[1] + (fo[1] - up[1]) * f, up[2] + (fo[2] - up[2]) * f];
+    }
+
+    /** จัดท่าแขน (ผิวและกระดูกต้นแขน) in-place: LBS ระหว่างท่อนบน/ท่อนล่าง น้ำหนักตามระยะห่างจากลำตัว */
+    poseArmPts(P) {
+      const r = this.armRig(), sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
       for (let i = 0; i < P.length; i += 3) {
-        const y = P[i + 1], z = P[i + 2], w = sstep(ARM_Y0, ARM_Y1 + 0.005, Math.abs(y)) * (1 - sstep(0.17, 0.26, z));
-        if (w <= 0) continue;
-        const f = clamp((z - pr.zLo) / pr.dz, 0, pr.n - 1), k = Math.min(pr.n - 2, Math.floor(f)), u = f - k;
-        P[i] -= w * (pr.delta[k] * (1 - u) + pr.delta[k + 1] * u);
-        P[i + 1] = y - Math.sign(y) * w * ARM_IN * sstep(0.2, 0.34, -z);   // ท่อนล่าง/มือขยับเข้าหาลำตัว
+        const y = P[i + 1], z = P[i + 2], sg = y < 0 ? -1 : 1, w = sstep(ARM_Y0, ARM_Y1 + 0.005, Math.abs(y)) * (1 - sstep(0.17, 0.26, z));
+        if (w <= 0 || z < -0.6) continue;
+        const f = 1 - sstep(r.E[2] - 0.03, r.E[2] + 0.03, z), q = this._armPoint([P[i], sg * y, z], r, f, this._twistW(z, r));
+        P[i] += w * (q[0] - P[i]); P[i + 1] += w * (sg * q[1] - y); P[i + 2] += w * (q[2] - z);
       }
       return P;
     }
 
-    /** meshData + ท่าแขนราบเตียง (ใช้กับผิวและกระดูกต้นแขน) — เมชอื่นคงเดิม */
+    /** ปรับผิวบริเวณอวัยวะเพศให้เรียบ: ตัดส่วนนูนให้ไม่เกินแนวผิวต้นขา/หัวหน่าว แล้วเกลี่ยเป็นแผ่นต่อเนื่อง */
+    fixGroin(P, I) {
+      const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+      const z0 = -0.80, z1 = -0.23, dz = 0.02, n = Math.round((z1 - z0) / dz) + 1, ceil = new Float32Array(n).fill(-Infinity);
+      for (let i = 0; i < P.length; i += 3) {
+        const y = Math.abs(P[i + 1]), z = P[i + 2];
+        if (y < 0.075 || y > 0.105 || z < z0 - dz || z > z1 + dz) continue;   // แนวผิวต้นขา/ข้างหัวหน่าว (นอกบริเวณที่จะปรับ)
+        const k = Math.round((z - z0) / dz); if (k >= 0 && k < n && P[i] > ceil[k]) ceil[k] = P[i];
+      }
+      for (let k = 0; k < n; k++) if (!Number.isFinite(ceil[k])) ceil[k] = k ? ceil[k - 1] : 0.05;
+      const cs = Array.from(ceil, (v, k) => (ceil[Math.max(0, k - 1)] + 2 * v + ceil[Math.min(n - 1, k + 1)]) / 4);
+      const nV = P.length / 3, wt = new Float32Array(nV);
+      for (let v = 0; v < nV; v++) {
+        const y = Math.abs(P[v * 3 + 1]), z = P[v * 3 + 2];
+        if (z < z0 || z > z1 || y > 0.075) continue;
+        const wr = (1 - sstep(0.045, 0.075, y)) * sstep(z1, z1 - 0.05, z) * sstep(z0, z0 + 0.05, z);
+        if (wr <= 0) continue;
+        wt[v] = wr;
+        const f = (z - z0) / dz, k = clamp(Math.floor(f), 0, n - 2), c = cs[k] + (cs[k + 1] - cs[k]) * (f - k);
+        if (P[v * 3] > c) P[v * 3] += wr * (c - P[v * 3]);
+      }
+      const nb = new Map();
+      const link = (a, b) => { if (wt[a] > 0) { let l = nb.get(a); if (!l) nb.set(a, l = []); l.push(b); } };
+      for (let t = 0; t < I.length; t += 3) for (let e = 0; e < 3; e++) { const a = I[t + e], b = I[t + (e + 1) % 3]; link(a, b); link(b, a); }
+      for (let it = 0; it < 60; it++) {
+        const nx = new Map();
+        for (const [v, l] of nb) { let m = 0; for (const u of l) m += P[u * 3]; nx.set(v, P[v * 3] + 0.6 * wt[v] * (m / l.length - P[v * 3])); }
+        for (const [v, x] of nx) P[v * 3] = x;
+      }
+      return P;
+    }
+
+    /** ขาแนบเบาะ: ปลายเท้าตกออกด้านนอก แล้วลดขาตามโปรไฟล์ด้านหลังจริง (ถ่วงน้ำหนักตามความสูงเหนือสะโพก) */
+    poseLegs(P) {
+      const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+      const down = (a, b, z) => sstep(0, 1, (a - z) / (a - b)), isLeg = (y, z) => Math.abs(y) < ARM_Y0 && z < -0.28;
+      const cen = { '1': [0, 0], '-1': [0, 0] }, cnt = { '1': 0, '-1': 0 };
+      for (let i = 0; i < P.length; i += 3) if (P[i + 2] < -0.80 && P[i + 2] > -0.90 && Math.abs(P[i + 1]) > 0.02) { const g = P[i + 1] > 0 ? '1' : '-1'; cen[g][0] += P[i]; cen[g][1] += Math.abs(P[i + 1]); cnt[g]++; }
+      for (const g of ['1', '-1']) if (cnt[g]) { cen[g][0] /= cnt[g]; cen[g][1] /= cnt[g]; }
+      for (let i = 0; i < P.length; i += 3) {
+        const y = P[i + 1], z = P[i + 2];
+        if (!isLeg(y, z) || Math.abs(y) < 0.003) continue;
+        const wf = down(-0.80, -1.05, z); if (wf <= 0) continue;
+        const sg = y < 0 ? -1 : 1, c = cen[String(sg)], q = this._rotAbout([P[i], Math.abs(y), z], [c[0], c[1], 0], [0, 0, 1], LEG_TOE_OUT * wf);
+        P[i] = q[0]; P[i + 1] = sg * q[1];
+      }
+      const z0 = -1.25, z1 = -0.30, dz = 0.02, n = Math.round((z1 - z0) / dz) + 1, back = new Float32Array(n).fill(NaN);
+      for (let i = 0; i < P.length; i += 3) {
+        if (!isLeg(P[i + 1], P[i + 2]) || P[i + 2] < z0 - dz / 2) continue;
+        const k = Math.round((P[i + 2] - z0) / dz); if (k >= 0 && k < n && !(back[k] <= P[i])) back[k] = P[i];
+      }
+      const target = this.landmarks.backX - 0.004;
+      let d = Array.from(back, b => (Number.isFinite(b) ? Math.max(0, b - target) : 0));
+      for (let rep = 0; rep < 2; rep++) d = d.map((v, k) => (d[Math.max(0, k - 1)] + 2 * v + d[Math.min(n - 1, k + 1)]) / 4);
+      for (let i = 0; i < P.length; i += 3) {
+        const y = P[i + 1], z = P[i + 2];
+        if (!isLeg(y, z)) continue;
+        const f = clamp((z - z0) / dz, 0, n - 1), k = Math.min(n - 2, Math.floor(f));
+        P[i] -= down(-0.30, -0.46, z) * (d[k] + (d[k + 1] - d[k]) * (f - k));
+      }
+      return P;
+    }
+
+    /** meshData + ท่านอนหงายตามธรรมชาติ (ผิว: กระดูกต้นแขน: แขน) — เมชอื่นคงเดิม; ผลถูกแคชและใช้ร่วมกัน (ห้ามแก้ค่าในอาร์เรย์) */
     posedData(m) {
-      const d = this.meshData(m);
-      if (this.armsOnBed && (m.group === 'skin' || m.group === 'humerus')) this.poseArms(d.positions);
+      if (!this.armsOnBed || (m.group !== 'skin' && m.group !== 'humerus')) return this.meshData(m);
+      this._posed = this._posed || new Map();
+      let d = this._posed.get(m.id);
+      if (!d) {
+        d = this.meshData(m);
+        if (m.group === 'skin') { this.fixGroin(d.positions, d.indices); this.poseArmPts(d.positions); this.poseLegs(d.positions); } else this.poseArmPts(d.positions);
+        this._posed.set(m.id, d);
+      }
       return d;
+    }
+
+    /** เปลือกตาปิด + แนวขนตา แทนเบ้าตาที่เป็นหลุมลึก (ข้อมูลล้วน: ทดสอบได้โดยไม่ต้องมี THREE) */
+    faceDetails() {
+      const lids = [], lashes = [];
+      for (const sg of [-1, 1]) {
+        const c = [LID.x, sg * LID.y, LID.z], r = [LID.rx, LID.ry, LID.rz];
+        lids.push({c, r});
+        for (let k = -4; k <= 4; k++) {
+          const dy = k * LID.ry * 0.17, dz = -0.0032 - 0.0014 * (1 - (dy / (LID.ry * 0.77)) ** 2), q = 1 - (dy / r[1]) ** 2 - (dz / r[2]) ** 2;
+          lashes.push({p: [c[0] + r[0] * Math.sqrt(Math.max(0.05, q)) + 0.0004, c[1] + dy, c[2] + dz], r: 0.0012});
+        }
+      }
+      return {lids, lashes};
+    }
+
+    buildFace(THREE, lidMat, lashMat) {
+      const g = new THREE.Group(), fd = this.faceDetails();
+      for (const l of fd.lids) { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 12), lidMat); m.position.set(...l.c); m.scale.set(...l.r); m.name = 'eyelid'; g.add(m); }
+      for (const l of fd.lashes) { const m = new THREE.Mesh(new THREE.SphereGeometry(l.r, 8, 6), lashMat); m.position.set(...l.p); m.name = 'lash'; g.add(m); }
+      return g;
+    }
+
+    /** กางเกงขายาว (ตามผิวจริงหลังจัดท่า): ผิวเดิมที่ออฟเซ็ตออกตามเส้นตั้งฉาก เกลี่ยเรียบ มีขอบเอวหนาเล็กน้อย
+     *  คลุมสะโพก-ขา (ไม่รวมแขน) ตั้งแต่ใต้สะดือถึงเหนือข้อเท้า คืน Mesh หรือ null */
+    buildPants(THREE, mat) {
+      const sk = this.manifest.meshes.find(q => q.group === 'skin');
+      if (!sk) return null;
+      const g = this.pantsGeometry(THREE);
+      return g ? Object.assign(new THREE.Mesh(g, mat), {name: 'pants'}) : null;
+    }
+
+    pantsGeometry(THREE) {
+      const sk = this.manifest.meshes.find(q => q.group === 'skin'), d = this.posedData(sk), P = d.positions, I = d.indices, nV = P.length / 3;
+      const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+      const nrm = new Float32Array(P.length);
+      for (let t = 0; t < I.length; t += 3) {
+        const a = I[t] * 3, b = I[t + 1] * 3, c = I[t + 2] * 3;
+        const ux = P[b] - P[a], uy = P[b + 1] - P[a + 1], uz = P[b + 2] - P[a + 2], vx = P[c] - P[a], vy = P[c + 1] - P[a + 1], vz = P[c + 2] - P[a + 2];
+        const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+        for (const q of [a, b, c]) { nrm[q] += nx; nrm[q + 1] += ny; nrm[q + 2] += nz; }
+      }
+      for (let v = 0; v < nV; v++) { const l = Math.hypot(nrm[v * 3], nrm[v * 3 + 1], nrm[v * 3 + 2]) || 1; nrm[v * 3] /= l; nrm[v * 3 + 1] /= l; nrm[v * 3 + 2] /= l; }
+      const sel = new Uint8Array(nV);
+      for (let v = 0; v < nV; v++) { const z = P[v * 3 + 2]; sel[v] = z < PANTS_TOP && z > PANTS_HEM && Math.abs(P[v * 3 + 1]) < PANTS_Y ? 1 : 0; }
+      const remap = new Int32Array(nV).fill(-1), keep = [], idx = [];
+      for (let t = 0; t < I.length; t += 3) {
+        if (!(sel[I[t]] && sel[I[t + 1]] && sel[I[t + 2]])) continue;
+        for (let e = 0; e < 3; e++) { const v = I[t + e]; if (remap[v] < 0) { remap[v] = keep.length; keep.push(v); } idx.push(remap[v]); }
+      }
+      if (!keep.length) return null;
+      const m = keep.length, pos = new Float32Array(m * 3), orig = new Float32Array(m * 3), nn = new Float32Array(m * 3);
+      keep.forEach((v, k) => {
+        const z = P[v * 3 + 2], off = PANTS_OFF + 0.0045 * (1 - sstep(PANTS_TOP, PANTS_TOP - 0.035, z));   // ขอบเอวหนากว่า
+        for (let c = 0; c < 3; c++) { orig[k * 3 + c] = P[v * 3 + c]; nn[k * 3 + c] = nrm[v * 3 + c]; pos[k * 3 + c] = P[v * 3 + c] + nrm[v * 3 + c] * off; }
+      });
+      const adj = Array.from({length: m}, () => []);
+      for (let t = 0; t < idx.length; t += 3) for (let e = 0; e < 3; e++) { adj[idx[t + e]].push(idx[t + (e + 1) % 3], idx[t + (e + 2) % 3]); }
+      for (let it = 0; it < 3; it++) {                                                   // เกลี่ยให้ผ้าเรียบกว่าผิว (กล้ามเนื้อ/รอยย่นเล็กๆ ไม่ขึ้นบนผ้า)
+        const nx = new Float32Array(pos);
+        for (let k = 0; k < m; k++) { const l = adj[k]; if (!l.length) continue; for (let c = 0; c < 3; c++) { let s = 0; for (const u of l) s += pos[u * 3 + c]; nx[k * 3 + c] = pos[k * 3 + c] + 0.5 * (s / l.length - pos[k * 3 + c]); } }
+        pos.set(nx);
+      }
+      const wc = new Float32Array(m);                                                    // บริเวณเป้า: เกลี่ยเพิ่มให้เป็นผ้าเรียบ ไม่ตามรูปผิวข้างใน
+      keep.forEach((v, k) => { wc[k] = (1 - sstep(0.05, 0.075, Math.abs(orig[k * 3 + 1]))) * sstep(-0.18, -0.24, orig[k * 3 + 2]) * sstep(-0.56, -0.50, orig[k * 3 + 2]); });
+      for (let it = 0; it < 18; it++) {
+        const nx = new Float32Array(pos);
+        for (let k = 0; k < m; k++) { if (wc[k] <= 0) continue; const l = adj[k]; for (let c = 0; c < 3; c++) { let s2 = 0; for (const u of l) s2 += pos[u * 3 + c]; nx[k * 3 + c] = pos[k * 3 + c] + 0.7 * wc[k] * (s2 / l.length - pos[k * 3 + c]); } }
+        pos.set(nx);
+      }
+      for (let it = 0; it < 4; it++) for (let k = 0; k < m; k++) {                     // บริเวณเป้า: ผ้าสูงกว่าผิวของจุดข้างเคียงด้วย (กันผิวโผล่ที่ตะเข็บ)
+        if (wc[k] <= 0) continue;
+        let mx = -Infinity; for (const u of adj[k]) if (orig[u * 3] > mx) mx = orig[u * 3];
+        if (pos[k * 3] < mx + 0.004) pos[k * 3] = mx + 0.004;
+      }
+      for (let k = 0; k < m; k++) {                                                      // ผ้าต้องไม่จมผิว: ห่างจากผิวตามเส้นตั้งฉากอย่างน้อย 3 mm
+        const dx = pos[k * 3] - orig[k * 3], dy = pos[k * 3 + 1] - orig[k * 3 + 1], dz = pos[k * 3 + 2] - orig[k * 3 + 2];
+        const dn = dx * nn[k * 3] + dy * nn[k * 3 + 1] + dz * nn[k * 3 + 2];
+        if (dn < 0.003) for (let c = 0; c < 3; c++) pos[k * 3 + c] += nn[k * 3 + c] * (0.003 - dn);
+        if (nn[k * 3] > 0.3 && pos[k * 3] < orig[k * 3] + 0.004) pos[k * 3] = orig[k * 3] + 0.004;   // ด้านบน (หงายหน้า): ผ้าไม่ต่ำกว่าผิวใต้มัน
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      return g;
     }
 
     /** สนามความสูงของผิวด้านบน: x สูงสุดของผิวทั้งตัว (ลำตัว ขา แขน) ในแต่ละช่อง (z, y) ขนาด cell เมตร
@@ -322,7 +506,10 @@
         if (m.group === 'skin') skin = mesh;
         else (BONE_GROUPS.includes(m.group) ? bones : organs).add(mesh);
       }
-      return {skin, bones, organs};
+      const out = {skin, bones, organs};
+      if (mats.pants && this.armsOnBed) out.pants = this.buildPants(THREE, mats.pants);          // กางเกง (อยู่ในพิกัดผู้ป่วย เหมือนผิว)
+      if (mats.lid && mats.lash && THREE.SphereGeometry) out.face = this.buildFace(THREE, mats.lid, mats.lash);   // เปลือกตาปิด
+      return out;
     }
 
     /** เมชห่อผิวสำหรับยิงรังสี (ซ่อนไว้) */
