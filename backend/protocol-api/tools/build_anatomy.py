@@ -115,6 +115,9 @@ def main():
     ap.add_argument("--src", required=True, help="โฟลเดอร์ partof_BP3D_4.0_obj_99 (ไฟล์ .obj)")
     ap.add_argument("--out", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "static", "anatomy"))
     ap.add_argument("--preview", default=None, help="โฟลเดอร์เก็บภาพตรวจสอบ (ไม่บังคับ)")
+    ap.add_argument("--original", action="store_true",
+                    help="ใช้เรขาคณิตตามไฟล์ BodyParts3D เดิมโดยไม่ดัดแปลงเมช: ไม่ขยายโพรงหัวใจ และผิวหนังไม่ผ่านขั้นทำความสะอาด "
+                         "(ตัดผิวชั้นใน/เศษแหลม/เศษลอย/ปิดรู) เหลือแค่ลดโพลีกอนกับแปลงพิกัด; ตารางหน้าตัดยังคำนวณเหมือนเดิม")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
@@ -185,7 +188,7 @@ def main():
     # ---------- เมชทั่วไป ----------
     for mid, group, name, paths in parts:
         v, f = load(paths)
-        if mid == "heart_ventricles":   # ผนังกล้ามเนื้อไม่มีในชุดข้อมูล: ขยายโพรงออก 8 mm ประมาณความหนาผนัง
+        if mid == "heart_ventricles" and not args.original:   # ผนังกล้ามเนื้อไม่มีในชุดข้อมูล: ขยายโพรงออก 8 mm ประมาณความหนาผนัง
             v = v + B.vertex_normals(v, f) * 8.0
         cell = CELL.get(group)
         n0 = len(f)
@@ -197,6 +200,7 @@ def main():
     # ---------- ผิวหนัง (เปลือกนอก) ----------
     sv, sf = load(skin_paths)
     sv, sf, ncomp = outer_shell(sv, sf)
+    raw_skin = (sv.copy(), sf.copy())                 # ผิวตามไฟล์เดิม (ก้อนใหญ่สุดก้อนเดียว) ใช้แสดงผลเมื่อ --original
     keep = B.classify_outer_faces(sv, sf)             # ตัดผิวชั้นในทิ้ง (ไม่งั้นลดโพลีกอนแล้วสองชั้นปนกันเป็นผิวหยัก)
     n_shell = len(sf)
     sv, sf = compact(sv, sf[keep])
@@ -209,9 +213,11 @@ def main():
     sv, sf = B.fill_small_holes(sv, sf, 160.0)
     print(f"skin: outer faces {n_outer:,} / {n_shell:,} -> {len(sf):,} after cleanup; roughness {B.roughness_deg(sv, sf):.2f} deg")
     skin_full = (sv.copy(), sf.copy())
-    sv_s, sf_s = B.cluster_simplify(sv, sf, CELL["skin"])
+    # skin_full (ทำความสะอาดแล้ว) ใช้คำนวณตารางหน้าตัด/จุดอ้างอิงเสมอ; เมชที่แสดงเป็นผิวเดิมเมื่อ --original
+    show_v, show_f = raw_skin if args.original else skin_full
+    sv_s, sf_s = B.cluster_simplify(show_v, show_f, CELL["skin"])
     pack.add("skin", "skin", "Skin", to_patient(sv_s), sf_s)
-    stats.append(("skin", "skin", len(sf), len(sf_s)))
+    stats.append(("skin", "skin", len(show_f), len(sf_s)))
 
     # ---------- ตารางหน้าตัด (polar map) ----------
     # จุดของกระดูกอก/ซี่โครง/กระดูกอ่อน/กระดูกสันหลังส่วนอก ใช้หาแกนกลางและขอบด้านในของกรงซี่โครง
