@@ -7,7 +7,7 @@ Source data: partof_BP3D_4.0_obj_99 (https://dbarchive.biosciencedbc.jp/en/bodyp
 Modifications (made by this project, tools/build_anatomy.py):
   - coordinate transform to the simulator patient frame (metres), origin at the rib-cage mid-depth
   - mesh simplification (quadric vertex clustering) and 16-bit quantisation
-  - skin: largest connected piece only (no other mesh edits); ventricle cavities used as-is (not inflated)
+  - skin kept as the outer shell only; ventricular cavities inflated by 8 mm to approximate the myocardium
   - derived lookup tables (torso cross-sections, rib-line heights) used for site selection and lung generation
   - lungs are NOT part of BodyParts3D partof_BP3D_4.0_obj_99: they are generated procedurally at run time
 
